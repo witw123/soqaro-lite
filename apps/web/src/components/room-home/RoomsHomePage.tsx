@@ -173,8 +173,13 @@ export function RoomsHomePage({
     primeRoomAudioFromUserGesture();
     try {
       const joined = await soqaroApi.joinRoomByCode(code.trim(), password);
-      storeRoomSnapshotHandoff(buildRoomJoinBootstrapSnapshot(joined));
+      let snapshot = await soqaroApi.getRoom(joined.roomId).catch(() => null);
+      if (!snapshot) {
+        snapshot = buildRoomJoinBootstrapSnapshot(joined);
+      }
+      storeRoomSnapshotHandoff(snapshot);
       window.localStorage.setItem(lastRoomStorageKey, joined.roomId);
+      setJoinDialogOpen(false);
       router.push(buildRoomHref(joined.roomId) as Route);
     } catch (error) {
       if (selectedRoom) {
@@ -372,9 +377,9 @@ export function RoomsHomePage({
               <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-surface-border bg-surface text-foreground-muted">
                 <LayoutGrid className="h-6 w-6" />
               </div>
-              <h3 className="mb-2 font-semibold text-foreground">当前没有房间</h3>
-              <p className="max-w-sm text-sm text-foreground-muted">
-                你可以先创建一个房间等待其他人加入，或者稍后回来刷新列表。
+              <h3 className="mb-1 text-sm font-semibold text-foreground">暂无房间记录</h3>
+              <p className="max-w-sm text-xs text-foreground-muted">
+                你可以新建房间并分享 6 位房间码给好友，或输入好友的房间码加入房间。
               </p>
             </div>
           )}

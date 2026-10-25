@@ -34,43 +34,43 @@ export function JoinCodeDialogModal({
 
   return (
     <RoomDialog
-      description="输入 6 位房间码，加入公开或私密房间。"
+      description="输入 6 位房间码，直接通过 P2P 连入对方房间。"
       onClose={onClose}
       title="输入房间码加入"
     >
       <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-        <label className="flex flex-col gap-2 text-sm text-foreground" htmlFor="join-code-input">
+        <label className="flex flex-col gap-2 text-xs font-medium text-foreground" htmlFor="join-code-input">
           房间码
           <input
             autoCapitalize="characters"
             autoCorrect="off"
-            className="w-full rounded-xl border border-surface-border bg-background px-3 py-2.5 font-mono uppercase text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+            className="w-full rounded-lg border-[0.5px] border-surface-border bg-background px-3 py-2 text-xs font-mono uppercase tracking-widest text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent"
             data-testid="join-code-input"
             id="join-code-input"
             onChange={(event) => {
               setLocalError(null);
               setCode(event.target.value.toUpperCase());
             }}
-            placeholder="输入 6 位房间码"
+            placeholder="例如 829104"
             spellCheck="false"
             value={code}
           />
         </label>
         {displayedError ? (
           <p
-            className="animate-fade-in rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-300"
+            className="animate-fade-in rounded-lg bg-red-500/10 border-[0.5px] border-red-500/20 px-3 py-2 text-xs text-red-300"
             data-testid="room-home-status"
             role="alert"
           >
             {displayedError}
           </p>
         ) : null}
-        <div className="flex justify-end gap-2 pt-2">
-          <Button onClick={onClose} type="button" variant="ghost">
+        <div className="flex justify-end gap-2 pt-1">
+          <Button onClick={onClose} size="sm" type="button" variant="ghost">
             取消
           </Button>
-          <Button data-testid="join-code-submit" disabled={isPending} type="submit">
-            {isPending ? "进入中…" : "进入房间"}
+          <Button data-testid="join-code-submit" disabled={isPending} size="sm" type="submit">
+            {isPending ? "正在连接…" : "进入房间"}
           </Button>
         </div>
       </form>

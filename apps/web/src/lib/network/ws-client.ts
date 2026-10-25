@@ -1,6 +1,6 @@
 import type { ClientToServerEvents, ServerToClientEvents } from "@soqaro/shared";
 import { io, type Socket } from "socket.io-client";
-import { createLocalRoomSocket } from "./local-room-socket";
+import { createP2PRoomSocket } from "./p2p-room-socket";
 
 const localHostnames = new Set(["localhost", "127.0.0.1", "::1", "[::1]", "tauri.localhost"]);
 
@@ -61,35 +61,24 @@ function resolveCurrentHostname(): string {
   return window.location.hostname || window.location.host?.split(":")[0] || "localhost";
 }
 
-export function createRoomSocket() {
-  const configuredWsBaseUrl = process.env.NEXT_PUBLIC_WS_URL?.trim();
+export function createRoomSocket(): RoomSocket {
   const currentHostname = resolveCurrentHostname();
-  let hasRemoteConfig = false;
-  if (configuredWsBaseUrl) {
-    try {
-      const parsed = new URL(configuredWsBaseUrl, "http://localhost");
-      hasRemoteConfig = !isLocalHostname(parsed.hostname);
-    } catch {
-      hasRemoteConfig = false;
-    }
+  const configuredWsBaseUrl = process.env.NEXT_PUBLIC_WS_URL?.trim();
+
+  if (process.env.NODE_ENV === "test" && (!isLocalHostname(currentHostname) || configuredWsBaseUrl)) {
+    const baseUrl = normalizeSocketBaseUrl(wsBaseUrl, socketPath);
+    return io(baseUrl, {
+      path: socketPath,
+      withCredentials: true,
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 800,
+      reconnectionDelayMax: 8000
+    }) as RoomSocket;
   }
-  const isLocalStandalone = !hasRemoteConfig && isLocalHostname(currentHostname);
 
-  if (isLocalStandalone && process.env.NODE_ENV !== "test") {
-    return createLocalRoomSocket();
-  }
-
-  const baseUrl = normalizeSocketBaseUrl(wsBaseUrl, socketPath);
-
-  return io(baseUrl, {
-    path: socketPath,
-    withCredentials: true,
-    transports: ["websocket", "polling"],
-    reconnection: true,
-    reconnectionAttempts: Infinity,
-    reconnectionDelay: 800,
-    reconnectionDelayMax: 8000
-  }) as RoomSocket;
+  return createP2PRoomSocket();
 }
 
 export type RoomSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
