@@ -2,7 +2,7 @@
   "name": "soqaro-lite",
   "version": "1.0.0",
   "private": true,
-  "description": "极简点对点高保真多人同步听歌独立桌面应用 (基于 WebRTC 与本地 SQLite)",
+  "description": "点对点多人音频同步收听应用",
   "packageManager": "pnpm@10.0.0",
   "scripts": {
     "dev": "turbo run dev --parallel",
