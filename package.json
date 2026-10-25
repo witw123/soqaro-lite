@@ -1,37 +1,22 @@
 {
   "name": "soqaro-lite",
   "version": "1.0.0",
-  "description": "极简点对点高保真多人同步听歌工具 (无需后端服务器)",
-  "type": "module",
+  "private": true,
+  "description": "极简点对点高保真多人同步听歌独立桌面应用 (基于 WebRTC 与本地 SQLite)",
+  "packageManager": "pnpm@10.0.0",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview"
-  },
-  "keywords": [
-    "webrtc",
-    "audio-sync",
-    "p2p",
-    "listen-together",
-    "peerjs",
-    "serverless"
-  ],
-  "author": "witw123",
-  "license": "MIT",
-  "dependencies": {
-    "lucide-react": "^1.61.0",
-    "peerjs": "^1.5.5",
-    "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "desktop:dev": "tauri dev --config apps/desktop/src-tauri/tauri.conf.json",
+    "desktop:build": "tauri build --config apps/desktop/src-tauri/tauri.conf.json",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.3.3",
-    "@types/node": "^24.19.2",
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
-    "@vitejs/plugin-react": "^6.1.2",
-    "tailwindcss": "^4.3.3",
-    "typescript": "~6.0.3",
-    "vite": "^8.3.4"
-  }
+    "@tauri-apps/cli": "2.11.4",
+    "turbo": "^2.5.0",
+    "typescript": "^5.8.2"
+  },
+  "license": "MIT"
 }

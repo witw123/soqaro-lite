@@ -1,0 +1,47 @@
+{
+  "name": "Soqaro",
+  "short_name": "Soqaro",
+  "description": "与好友实时同步收听本地高保真音乐，提供浏览器与桌面优先的协作听歌体验。",
+  "start_url": "/app",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/apple-icon",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "发现音乐",
+      "url": "/app/discover",
+      "description": "探索发现推荐音乐与公开房间"
+    },
+    {
+      "name": "本地歌单",
+      "url": "/app/playlists",
+      "description": "查看并播放我的本地歌单"
+    }
+  ]
+}

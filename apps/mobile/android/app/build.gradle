@@ -1,0 +1,102 @@
+apply plugin: 'com.android.application'
+
+// The release APK is signed with the Soqaro upload key. CI decodes the
+// keystore from a repository secret and points ANDROID_KEYSTORE_PATH at it; a
+// local build can instead put the same four values in `keystore.properties`
+// beside this file, which stays out of git. Without a key `assembleRelease`
+// emits an unsigned APK that cannot be installed, so the CI job refuses to run
+// before the secret exists instead of uploading one.
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+def signingValue = { String environmentName, String propertyName ->
+    System.getenv(environmentName) ?: keystoreProperties.getProperty(propertyName)
+}
+
+def releaseKeystorePath = signingValue("ANDROID_KEYSTORE_PATH", "storeFile")
+def releaseKeystorePassword = signingValue("ANDROID_KEYSTORE_PASSWORD", "storePassword")
+def releaseKeyAlias = signingValue("ANDROID_KEY_ALIAS", "keyAlias")
+def releaseKeyPassword = signingValue("ANDROID_KEY_PASSWORD", "keyPassword")
+def hasReleaseKeystore = [releaseKeystorePath, releaseKeystorePassword, releaseKeyAlias, releaseKeyPassword].every { it }
+
+// CI passes the release tag as ANDROID_VERSION_NAME. Android decides an upgrade
+// on versionCode alone, so it is derived from the version people read rather
+// than hand-numbered: 0.3.3 -> 303. The old hand-numbered 33 stops here on
+// purpose — 303 is larger, so already-installed builds still move forward.
+def appVersionName = System.getenv("ANDROID_VERSION_NAME") ?: "1.0.0"
+def versionMatch = appVersionName =~ /^(\d+)\.(\d+)\.(\d+)/
+def appVersionCode = 1
+if (versionMatch.find()) {
+    appVersionCode = versionMatch.group(1).toInteger() * 10000 + versionMatch.group(2).toInteger() * 100 + versionMatch.group(3).toInteger()
+}
+
+android {
+    namespace "com.soqaro.app"
+    compileSdk rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "com.soqaro.app"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode appVersionCode
+        versionName appVersionName
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    signingConfigs {
+        release {
+            if (hasReleaseKeystore) {
+                storeFile file(releaseKeystorePath)
+                storePassword releaseKeystorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (hasReleaseKeystore) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    // MediaSessionCompat + MediaStyle notification for the system media controls.
+    implementation "androidx.media:media:1.7.0"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

@@ -1,0 +1,22 @@
+{
+  "appId": "top.witw.soqaro.lite",
+  "appName": "Soqaro Lite",
+  "webDir": "../../apps/web/out",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true
+  },
+  "loggingBehavior": "none",
+  "plugins": {
+    "CapacitorCookies": {
+      "enabled": true
+    },
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  }
+}

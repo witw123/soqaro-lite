@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Soqaro</string>
+    <string name="title_activity_main">Soqaro</string>
+    <string name="package_name">com.soqaro.app</string>
+    <string name="custom_url_scheme">com.soqaro.app</string>
+</resources>

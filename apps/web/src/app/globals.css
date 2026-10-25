@@ -1,0 +1,1840 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root,
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --app-sidebar-width: 4rem;
+
+    /* Radix Colors - Slate (Dark) */
+    --slate-1: #111113;
+    --slate-2: #18191b;
+    --slate-3: #212225;
+    --slate-4: #272a2d;
+    --slate-5: #2e3135;
+    --slate-6: #363a3f;
+    --slate-7: #43484e;
+    --slate-8: #5a6169;
+    --slate-9: #69717b;
+    --slate-10: #777f8a;
+    --slate-11: #9ba1a6;
+    --slate-12: #ecedee;
+
+    /* Radix Colors - Blue (Dark) */
+    --blue-1: #0d1520;
+    --blue-2: #111b27;
+    --blue-3: #13273c;
+    --blue-4: #15324d;
+    --blue-5: #183e60;
+    --blue-6: #1d4c76;
+    --blue-7: #245d90;
+    --blue-8: #2d74b2;
+    --blue-9: #0090ff;
+    --blue-10: #0588f0;
+    --blue-11: #70b8ff;
+    --blue-12: #c2e6ff;
+
+    --background: var(--slate-1);
+    --background-secondary: var(--slate-2);
+    --foreground: var(--slate-12);
+    --foreground-muted: var(--slate-11);
+
+    --surface: var(--slate-3);
+    --surface-elevated: var(--slate-4);
+    --surface-hover: var(--slate-4);
+    --surface-active: var(--slate-5);
+    --surface-border: var(--slate-6);
+    --surface-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+
+    --accent-rgb: 0 144 255;
+    --accent-hover-rgb: 5 136 240;
+    --accent: var(--blue-9);
+    --accent-hover: var(--blue-10);
+    --accent-subtle: var(--blue-3);
+    --accent-muted: var(--blue-11);
+    --accent-glow: rgba(0, 144, 255, 0.22);
+    --room-mobile-bottom-inset: calc(7.5rem + env(safe-area-inset-bottom));
+    --room-desktop-bottom-inset: 4rem;
+
+    --sidebar-background: var(--slate-2);
+    --sidebar-solid-background: var(--slate-1);
+    --sidebar-border: var(--slate-6);
+    --sidebar-divider: var(--slate-6);
+    --sidebar-foreground: var(--slate-12);
+    --sidebar-secondary: var(--slate-11);
+    --sidebar-tertiary: var(--slate-10);
+    --sidebar-hover: var(--slate-4);
+    --sidebar-active: var(--blue-3);
+    --sidebar-active-foreground: var(--blue-11);
+    --sidebar-shadow: 4px 0 16px rgba(0, 0, 0, 0.12);
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) {
+    color-scheme: light;
+
+    /* Radix Colors - Slate (Light) */
+    --slate-1: #fcfcfd;
+    --slate-2: #f9f9fb;
+    --slate-3: #f0f0f3;
+    --slate-4: #e8e8ec;
+    --slate-5: #e0e1e6;
+    --slate-6: #d9d9e0;
+    --slate-7: #cdced6;
+    --slate-8: #b9bbc6;
+    --slate-9: #8b8d98;
+    --slate-10: #80828d;
+    --slate-11: #60646c;
+    --slate-12: #1c2024;
+
+    /* Radix Colors - Blue (Light) */
+    --blue-1: #fbfdff;
+    --blue-2: #f4faff;
+    --blue-3: #e6f4fe;
+    --blue-4: #d5ecfd;
+    --blue-5: #c2e2fb;
+    --blue-6: #acd4f9;
+    --blue-7: #8ec2f4;
+    --blue-8: #5eb1ef;
+    --blue-9: #0090ff;
+    --blue-10: #0588f0;
+    --blue-11: #0d74ce;
+    --blue-12: #113264;
+
+    --background: var(--slate-1);
+    --background-secondary: var(--slate-2);
+    --foreground: var(--slate-12);
+    --foreground-muted: var(--slate-11);
+
+    --surface: var(--slate-3);
+    --surface-elevated: #ffffff;
+    --surface-hover: var(--slate-4);
+    --surface-active: var(--slate-5);
+    --surface-border: var(--slate-6);
+    --surface-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+
+    --accent-rgb: 0 144 255;
+    --accent-hover-rgb: 5 136 240;
+    --accent: var(--blue-9);
+    --accent-hover: var(--blue-10);
+    --accent-subtle: var(--blue-3);
+    --accent-muted: var(--blue-11);
+    --accent-glow: rgba(0, 144, 255, 0.18);
+
+    --sidebar-background: var(--slate-2);
+    --sidebar-solid-background: #ffffff;
+    --sidebar-border: var(--slate-6);
+    --sidebar-divider: var(--slate-6);
+    --sidebar-foreground: var(--slate-12);
+    --sidebar-secondary: var(--slate-11);
+    --sidebar-tertiary: var(--slate-10);
+    --sidebar-hover: var(--slate-4);
+    --sidebar-active: var(--blue-3);
+    --sidebar-active-foreground: var(--blue-11);
+    --sidebar-shadow: 4px 0 16px rgba(0, 0, 0, 0.04);
+  }
+
+  html[data-theme="sage-dark"] {
+    color-scheme: dark;
+    --background: #141716;
+    --background-secondary: #1a1e1d;
+    --foreground: #ecf1ee;
+    --foreground-muted: #98a7a0;
+    --surface: rgba(255, 255, 255, 0.04);
+    --surface-elevated: rgba(255, 255, 255, 0.08);
+    --surface-hover: rgba(255, 255, 255, 0.06);
+    --surface-border: rgba(180, 210, 195, 0.14);
+    --surface-shadow: 0 18px 48px rgba(0, 0, 0, 0.25);
+    --accent-rgb: 82 133 112;
+    --accent-hover-rgb: 98 153 131;
+    --accent: rgb(var(--accent-rgb));
+    --accent-hover: rgb(var(--accent-hover-rgb));
+    --accent-glow: rgba(82, 133, 112, 0.35);
+
+    --sidebar-background: rgba(26, 30, 29, 0.92);
+    --sidebar-solid-background: #1a1e1d;
+    --sidebar-border: rgba(180, 210, 195, 0.12);
+    --sidebar-divider: rgba(180, 210, 195, 0.08);
+    --sidebar-foreground: #ecf1ee;
+    --sidebar-secondary: #98a7a0;
+    --sidebar-tertiary: #6c7a74;
+    --sidebar-hover: rgba(255, 255, 255, 0.06);
+    --sidebar-active: rgba(82, 133, 112, 0.18);
+    --sidebar-active-foreground: #ecf1ee;
+    --sidebar-shadow: 18px 0 42px rgba(0, 0, 0, 0.25);
+  }
+
+  html[data-theme="sage-light"] {
+    color-scheme: light;
+    --background: #f2f5f3;
+    --background-secondary: #ffffff;
+    --foreground: #1c2520;
+    --foreground-muted: #52635a;
+    --surface: rgba(30, 50, 40, 0.04);
+    --surface-elevated: #ffffff;
+    --surface-hover: rgba(30, 50, 40, 0.06);
+    --surface-border: rgba(30, 50, 40, 0.12);
+    --surface-shadow: 0 18px 48px rgba(30, 50, 40, 0.06);
+    --accent-rgb: 61 109 90;
+    --accent-hover-rgb: 50 89 73;
+    --accent: rgb(var(--accent-rgb));
+    --accent-hover: rgb(var(--accent-hover-rgb));
+    --accent-glow: rgba(61, 109, 90, 0.25);
+
+    --sidebar-background: rgba(255, 255, 255, 0.88);
+    --sidebar-solid-background: #ffffff;
+    --sidebar-border: rgba(30, 50, 40, 0.1);
+    --sidebar-divider: rgba(30, 50, 40, 0.06);
+    --sidebar-foreground: #1c2520;
+    --sidebar-secondary: #52635a;
+    --sidebar-tertiary: #83948b;
+    --sidebar-hover: rgba(30, 50, 40, 0.05);
+    --sidebar-active: rgba(61, 109, 90, 0.12);
+    --sidebar-active-foreground: #3d6d5a;
+    --sidebar-shadow: 16px 0 36px rgba(30, 50, 40, 0.06);
+  }
+
+  html[data-theme="obsidian"] {
+    color-scheme: dark;
+    --background: #090a0c;
+    --background-secondary: #131418;
+    --foreground: #f8fafc;
+    --foreground-muted: #94a3b8;
+    --surface: rgba(255, 255, 255, 0.05);
+    --surface-elevated: rgba(255, 255, 255, 0.095);
+    --surface-hover: rgba(255, 255, 255, 0.075);
+    --surface-border: rgba(255, 255, 255, 0.15);
+    --surface-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
+    --accent-rgb: 250 35 59;
+    --accent-hover-rgb: 255 69 90;
+    --accent: rgb(var(--accent-rgb));
+    --accent-hover: rgb(var(--accent-hover-rgb));
+    --accent-glow: rgba(250, 35, 59, 0.4);
+
+    --sidebar-background: rgba(19, 20, 24, 0.94);
+    --sidebar-solid-background: #131418;
+    --sidebar-border: rgba(255, 255, 255, 0.14);
+    --sidebar-divider: rgba(255, 255, 255, 0.08);
+    --sidebar-foreground: #f8fafc;
+    --sidebar-secondary: #94a3b8;
+    --sidebar-tertiary: #64748b;
+    --sidebar-hover: rgba(255, 255, 255, 0.07);
+    --sidebar-active: rgba(250, 35, 59, 0.18);
+    --sidebar-active-foreground: #ffffff;
+    --sidebar-shadow: 18px 0 42px rgba(0, 0, 0, 0.35);
+  }
+
+  html[data-theme="midnight-dark"] {
+    color-scheme: dark;
+    --background: #0a0f18;
+    --background-secondary: #101826;
+    --foreground: #eef4fc;
+    --foreground-muted: #8ba2c2;
+    --surface: rgba(255, 255, 255, 0.045);
+    --surface-elevated: rgba(255, 255, 255, 0.085);
+    --surface-hover: rgba(255, 255, 255, 0.065);
+    --surface-border: rgba(120, 170, 230, 0.15);
+    --surface-shadow: 0 18px 48px rgba(0, 0, 0, 0.3);
+    --accent-rgb: 56 189 248;
+    --accent-hover-rgb: 96 165 250;
+    --accent: rgb(var(--accent-rgb));
+    --accent-hover: rgb(var(--accent-hover-rgb));
+    --accent-glow: rgba(56, 189, 248, 0.35);
+
+    --sidebar-background: rgba(16, 24, 38, 0.92);
+    --sidebar-solid-background: #101826;
+    --sidebar-border: rgba(120, 170, 230, 0.14);
+    --sidebar-divider: rgba(120, 170, 230, 0.08);
+    --sidebar-foreground: #eef4fc;
+    --sidebar-secondary: #8ba2c2;
+    --sidebar-tertiary: #627794;
+    --sidebar-hover: rgba(255, 255, 255, 0.065);
+    --sidebar-active: rgba(56, 189, 248, 0.16);
+    --sidebar-active-foreground: #38bdf8;
+    --sidebar-shadow: 18px 0 42px rgba(0, 0, 0, 0.3);
+  }
+
+  html[data-theme="midnight-light"] {
+    color-scheme: light;
+    --background: #eef3f9;
+    --background-secondary: #ffffff;
+    --foreground: #0f1d30;
+    --foreground-muted: #4a6282;
+    --surface: rgba(20, 50, 90, 0.04);
+    --surface-elevated: #ffffff;
+    --surface-hover: rgba(20, 50, 90, 0.06);
+    --surface-border: rgba(20, 50, 90, 0.12);
+    --surface-shadow: 0 18px 48px rgba(20, 50, 90, 0.06);
+    --accent-rgb: 2 132 199;
+    --accent-hover-rgb: 3 105 161;
+    --accent: rgb(var(--accent-rgb));
+    --accent-hover: rgb(var(--accent-hover-rgb));
+    --accent-glow: rgba(2, 132, 199, 0.25);
+
+    --sidebar-background: rgba(255, 255, 255, 0.88);
+    --sidebar-solid-background: #ffffff;
+    --sidebar-border: rgba(20, 50, 90, 0.1);
+    --sidebar-divider: rgba(20, 50, 90, 0.06);
+    --sidebar-foreground: #0f1d30;
+    --sidebar-secondary: #4a6282;
+    --sidebar-tertiary: #7b91ad;
+    --sidebar-hover: rgba(20, 50, 90, 0.05);
+    --sidebar-active: rgba(2, 132, 199, 0.12);
+    --sidebar-active-foreground: #0284c7;
+    --sidebar-shadow: 16px 0 36px rgba(20, 50, 90, 0.06);
+  }
+
+  html[data-theme="paper"] {
+    color-scheme: light;
+    --background: #f5f2eb;
+    --background-secondary: #ffffff;
+    --foreground: #231f1c;
+    --foreground-muted: #5e554b;
+    --surface: rgba(60, 45, 30, 0.04);
+    --surface-elevated: #ffffff;
+    --surface-hover: rgba(60, 45, 30, 0.06);
+    --surface-border: rgba(60, 45, 30, 0.13);
+    --surface-shadow: 0 18px 48px rgba(60, 45, 30, 0.06);
+    --accent-rgb: 180 83 9;
+    --accent-hover-rgb: 146 64 14;
+    --accent: rgb(var(--accent-rgb));
+    --accent-hover: rgb(var(--accent-hover-rgb));
+    --accent-glow: rgba(180, 83, 9, 0.25);
+
+    --sidebar-background: rgba(255, 255, 255, 0.88);
+    --sidebar-solid-background: #ffffff;
+    --sidebar-border: rgba(60, 45, 30, 0.11);
+    --sidebar-divider: rgba(60, 45, 30, 0.06);
+    --sidebar-foreground: #231f1c;
+    --sidebar-secondary: #5e554b;
+    --sidebar-tertiary: #8f8477;
+    --sidebar-hover: rgba(60, 45, 30, 0.05);
+    --sidebar-active: rgba(180, 83, 9, 0.12);
+    --sidebar-active-foreground: #b45309;
+    --sidebar-shadow: 16px 0 36px rgba(60, 45, 30, 0.06);
+  }
+
+  html[data-sidebar-collapsed="false"] {
+    --app-sidebar-width: 12.5rem;
+  }
+
+  /* Mobile browser chrome makes `100vh` taller than the visible area, so
+     full-height shells use `dvh` instead. It needs Chrome 108+, which the
+     Capacitor WebView cannot be assumed to have, so the unit is indirected
+     through a variable: one fallback here instead of a `vh`/`dvh` pair at
+     each of the ~40 call sites. Consume as `calc(N * var(--app-dvh))`. */
+  :root {
+    --app-dvh: 1vh;
+    --ui-scale: 1;
+  }
+
+  @supports (height: 100dvh) {
+    :root {
+      --app-dvh: 1dvh;
+    }
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) body {
+    background-color: var(--background);
+  }
+
+  html[data-lyrics-window="true"],
+  html[data-lyrics-window="true"] body {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--background);
+    color: var(--foreground);
+    overflow-x: hidden;
+    min-height: calc(100 * var(--app-dvh));
+    -webkit-tap-highlight-color: transparent;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-optical-sizing: auto;
+    letter-spacing: 0;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    letter-spacing: 0;
+  }
+
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--foreground);
+    -webkit-box-shadow: 0 0 0 1000px var(--background) inset;
+    box-shadow: 0 0 0 1000px var(--background) inset;
+    caret-color: var(--foreground);
+    transition: background-color 9999s ease-out 0s;
+  }
+
+  /* Prevent persistent focus rings, borders, and shadows after mouse/touch click while preserving keyboard accessibility */
+  *:focus:not(:focus-visible) {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  button,
+  [role="button"],
+  a,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Chromium draws its own clear button inside `input[type="search"]`, which
+     lands next to the one the search bar renders itself and shows up as a
+     duplicate "×". Strip the native search decorations so the component's own
+     control is the only one; keeping `type="search"` preserves the semantics
+     that the input is a search field. */
+  input[type="search"]::-webkit-search-cancel-button,
+  input[type="search"]::-webkit-search-decoration,
+  input[type="search"]::-webkit-search-results-button,
+  input[type="search"]::-webkit-search-results-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  button:focus:not(:focus-visible),
+  [role="button"]:focus:not(:focus-visible),
+  a:focus:not(:focus-visible) {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Prevent sticky hover effects on touch devices, but keep active/selected states intact */
+  @media (hover: none) {
+    button:not([aria-selected="true"]):not([aria-pressed="true"]):hover:not(:active),
+    [role="button"]:not([aria-selected="true"]):not([aria-pressed="true"]):hover:not(:active) {
+      background-color: transparent;
+    }
+  }
+
+  /* Default every border to the theme token instead of Tailwind's gray-200.
+     A border-color utility that is missing from the loaded stylesheet (e.g. a
+     cached CSS chunk older than the markup) must then degrade to the quiet
+     themed line, never to a bright default stroke. */
+  *,
+  ::before,
+  ::after {
+    border-color: var(--surface-border);
+  }
+}
+
+@layer components {
+  .app-sidebar__footer {
+    border-color: var(--sidebar-divider);
+  }
+
+  .app-sidebar__footer-control {
+    color: var(--sidebar-secondary);
+  }
+
+  .app-sidebar__footer-control:hover {
+    background: var(--sidebar-hover);
+    color: var(--sidebar-foreground);
+  }
+
+  .app-sidebar__theme svg {
+    color: currentColor;
+  }
+
+  .workspace-page {
+    background: var(--background);
+    color: var(--foreground);
+    min-height: calc(100 * var(--app-dvh));
+    height: calc(100 * var(--app-dvh));
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-width: 100vw;
+    box-sizing: border-box;
+    padding-bottom: calc(12rem + env(safe-area-inset-bottom));
+  }
+
+  .workspace-page__inner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 1280px;
+    min-height: 100%;
+    margin-inline: auto;
+    padding: 2rem 1rem 3rem;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  .workspace-page__inner--wide {
+    max-width: 1440px;
+  }
+
+  .home-workspace-page .home-centered-workspace {
+    max-width: none;
+  }
+
+  .workspace-page__header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.25rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .workspace-page__heading {
+    min-width: 0;
+  }
+
+  .workspace-page__eyebrow {
+    color: var(--accent);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1rem;
+    letter-spacing: 0;
+  }
+
+  .workspace-page__title {
+    margin-top: 0.25rem;
+    color: var(--foreground);
+    font-size: 1.75rem;
+    font-weight: 650;
+    line-height: 2.125rem;
+    letter-spacing: 0;
+  }
+
+  .workspace-page__description {
+    margin-top: 0.375rem;
+    color: var(--foreground-muted);
+    font-size: 0.875rem;
+    line-height: 1.375rem;
+  }
+
+  .workspace-page__section {
+    margin-top: 2.25rem;
+  }
+
+  .workspace-surface {
+    border: 1px solid var(--surface-border);
+    border-radius: 0.75rem;
+    background: var(--surface);
+    box-shadow: var(--surface-shadow);
+    -webkit-backdrop-filter: blur(18px) saturate(130%);
+    backdrop-filter: blur(18px) saturate(130%);
+  }
+
+  .workspace-segmented {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.125rem;
+    padding: 0.25rem;
+    border: 1px solid var(--surface-border);
+    border-radius: 0.625rem;
+    background: var(--surface);
+  }
+
+  .workspace-segmented__item {
+    min-height: 2rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.375rem;
+    color: var(--foreground-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.25rem;
+    transition: background-color 180ms cubic-bezier(0.2, 0.8, 0.2, 1), color 180ms cubic-bezier(0.2, 0.8, 0.2, 1), transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .workspace-segmented__item:hover {
+    color: var(--foreground);
+    background: var(--surface-hover);
+  }
+
+  .workspace-segmented__item[aria-selected="true"],
+  .workspace-segmented__item[aria-pressed="true"] {
+    background: var(--surface-elevated);
+    border: 1px solid var(--surface-border);
+    color: var(--foreground);
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .workspace-filter {
+    display: inline-flex;
+    min-height: 2rem;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid var(--surface-border);
+    border-radius: 0.5rem;
+    background: var(--surface);
+    padding: 0.375rem 0.75rem;
+    color: var(--foreground-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.25rem;
+    transition: background-color 180ms cubic-bezier(0.2, 0.8, 0.2, 1), border-color 180ms cubic-bezier(0.2, 0.8, 0.2, 1), color 180ms cubic-bezier(0.2, 0.8, 0.2, 1), transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .workspace-filter:hover {
+    background: var(--surface-hover);
+    color: var(--foreground);
+  }
+
+  .workspace-filter--active {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #ffffff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  .workspace-filter:active {
+    transform: scale(0.97);
+  }
+
+  .workspace-page-background {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: var(--background);
+  }
+
+  .app-sidebar__nav-item {
+    color: var(--sidebar-secondary);
+  }
+
+  .app-sidebar__nav-item:hover {
+    background: var(--sidebar-hover);
+    color: var(--sidebar-foreground);
+  }
+
+  .app-sidebar__nav-item--active {
+    background: var(--sidebar-active);
+    color: var(--sidebar-active-foreground);
+    box-shadow: none;
+  }
+
+  html[data-custom-layout-editor-open="true"],
+  html[data-custom-layout-editor-open="true"] body {
+    overflow: hidden !important;
+  }
+
+  html[data-custom-layout-editor-open="true"] .app-sidebar,
+  html[data-custom-layout-editor-open="true"] .custom-layout-content-region,
+  html[data-custom-layout-editor-open="true"] [data-custom-layout-item="player"],
+  html[data-custom-layout-editor-open="true"] .mobile-app-navigation {
+    display: none !important;
+  }
+
+  html.theme-transitioning,
+  html.theme-transitioning body,
+  html.theme-transitioning body * {
+    transition-property: background-color, border-color, color, fill, stroke, box-shadow !important;
+    transition-duration: 360ms !important;
+    transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 420ms;
+    animation-fill-mode: both;
+    animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  ::view-transition-old(root) {
+    animation-name: theme-view-transition-out;
+  }
+
+  ::view-transition-new(root) {
+    animation-name: theme-view-transition-reveal;
+    clip-path: circle(0 at var(--theme-transition-x) var(--theme-transition-y));
+  }
+
+  @keyframes theme-view-transition-out {
+    to {
+      opacity: 0.96;
+    }
+  }
+
+  @keyframes theme-view-transition-reveal {
+    to {
+      clip-path: circle(150vmax at var(--theme-transition-x) var(--theme-transition-y));
+    }
+  }
+
+  .app-sidebar {
+    /* width is a layout property — will-change cannot composite it, so drop the
+       reserved layer; the 200ms collapse reflow is an occasional interaction. */
+    transition: width 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+
+  .app-sidebar,
+  .app-sidebar * {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+
+  .app-sidebar::-webkit-scrollbar,
+  .app-sidebar *::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+
+  html[data-full-motion="true"] [data-card-scene] .full-motion-spin {
+    animation: slowVinylRotate 24s linear infinite !important;
+  }
+
+  html[data-full-motion="true"] [data-card-scene] .full-motion-pulse {
+    animation: pulseRadialWave 3.6s cubic-bezier(0.15, 0.85, 0.35, 1) infinite !important;
+    /* Scale instead of animating the SVG r geometry attribute: geometry keyframes
+       relayout the SVG every frame, transform stays on the compositor. */
+    transform-box: fill-box;
+    transform-origin: center;
+    vector-effect: non-scaling-stroke;
+  }
+
+  html[data-full-motion="true"] [data-card-scene] .full-motion-twinkle {
+    animation: twinkleStar 3.2s ease-in-out infinite !important;
+  }
+
+  html[data-full-motion="true"] [data-card-scene] .full-motion-ping {
+    animation: ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite !important;
+  }
+
+
+
+  .mobile-app-navigation {
+    /* Sits above scrolling content next to the player bar; realtime blur here cost
+       1-3ms GPU per frame on mid-range mobiles, so use a near-opaque surface instead. */
+    background: color-mix(in srgb, var(--background-secondary) 97%, transparent);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .mobile-app-navigation__item {
+    display: inline-flex;
+    min-width: 0;
+    height: 100%;
+    gap: 0.15rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0.2rem 0.1rem;
+    border-radius: 0.5rem;
+    color: var(--foreground-muted);
+    flex-direction: column;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    line-height: 1.1;
+    text-decoration: none;
+    transition: color 180ms cubic-bezier(0.2, 0.8, 0.2, 1), background-color 180ms cubic-bezier(0.2, 0.8, 0.2, 1), transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .mobile-app-navigation__icon {
+    display: block;
+    flex: 0 0 auto;
+  }
+
+  .mobile-app-navigation__label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-app-navigation__item--active {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .mobile-app-navigation__item:active {
+    transform: scale(0.92);
+  }
+
+  .mobile-app-route-view {
+    animation: mobile-route-present 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  @media (max-width: 767px) {
+    /* Home content scrolls in one document flow while the compact player and
+       bottom navigation stay fixed above it. */
+    .home-workspace-page {
+      min-height: 0;
+      padding-bottom: 0;
+      overscroll-behavior-y: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .home-workspace-page .home-centered-workspace {
+      flex: none;
+      min-height: max-content;
+      padding-bottom: calc(7.5rem + env(safe-area-inset-bottom));
+    }
+  }
+
+  .mobile-player-panel {
+    animation: mobile-player-panel-present 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  /* The route view ends at transform:none on purpose: with fill-mode:both a
+     retained translateY(0) would keep the container transformed forever,
+     making it the containing block + stacking context for every descendant —
+     which trapped fixed modals (and their z-index) below the fixed bottom
+     player and mobile navigation. */
+  @keyframes mobile-route-present {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @keyframes mobile-player-panel-present {
+    from { opacity: 0; transform: translateY(12px) scale(0.985); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @media (min-width: 768px) {
+    .app-sidebar {
+      width: var(--app-sidebar-width);
+    }
+
+    html[data-sidebar-collapsed] .md\:pl-60 {
+      padding-left: var(--app-sidebar-width) !important;
+      transition: padding-left 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    /* The layout editor uses a 1440 x 900 reference canvas. Percent variables
+       keep the saved arrangement proportional on larger desktop windows. */
+    html[data-custom-layout-enabled="true"] .app-sidebar[data-custom-layout-item="sidebar"] {
+      position: fixed !important;
+      top: var(--custom-sidebar-y) !important;
+      right: auto !important;
+      bottom: auto !important;
+      left: var(--custom-sidebar-x) !important;
+      width: var(--custom-sidebar-width) !important;
+      height: var(--custom-sidebar-height) !important;
+      min-width: 0 !important;
+      max-height: none !important;
+      margin: 0 !important;
+      box-sizing: border-box !important;
+    }
+
+    html[data-custom-layout-enabled="true"] .custom-layout-content-region {
+      position: fixed !important;
+      z-index: 10;
+      top: var(--custom-content-y) !important;
+      right: auto !important;
+      bottom: auto !important;
+      left: var(--custom-content-x) !important;
+      display: block !important;
+      width: var(--custom-content-width) !important;
+      height: var(--custom-content-height) !important;
+      min-height: 0 !important;
+      max-height: none !important;
+      margin: 0 !important;
+      box-sizing: border-box !important;
+      overflow: hidden;
+    }
+
+    html[data-custom-layout-enabled="true"] .custom-layout-content-region > * {
+      width: 100% !important;
+      height: 100% !important;
+      min-height: 0 !important;
+      max-height: none !important;
+      padding-left: 0 !important;
+      margin: 0 !important;
+      box-sizing: border-box !important;
+    }
+
+    html[data-custom-layout-enabled="true"] [data-custom-layout-item="player"] {
+      position: fixed !important;
+      z-index: 60;
+      top: var(--custom-player-y) !important;
+      right: auto !important;
+      bottom: auto !important;
+      left: var(--custom-player-x) !important;
+      width: var(--custom-player-width) !important;
+      height: var(--custom-player-height) !important;
+      min-height: 0 !important;
+      max-height: none !important;
+      min-width: 0 !important;
+      margin: 0 !important;
+      box-sizing: border-box !important;
+    }
+
+    html[data-custom-layout-enabled="true"] [data-custom-layout-item="player"] {
+      display: flex !important;
+      align-items: stretch !important;
+      min-width: 0 !important;
+      padding: 0.25rem 0.75rem !important;
+    }
+
+    html[data-custom-layout-enabled="true"]
+      [data-custom-layout-item="player"]
+      [data-custom-layout-player-content="true"] {
+      display: flex !important;
+      height: 100% !important;
+      min-width: 0 !important;
+      min-height: 0 !important;
+      max-height: 100% !important;
+      overflow: visible !important;
+    }
+
+    html[data-custom-layout-enabled="true"]
+      [data-custom-layout-item="player"]
+      [data-player-layout="mobile"],
+    html[data-custom-layout-enabled="true"]
+      [data-custom-layout-item="player"]
+      [data-player-layout="desktop"] {
+      width: 100% !important;
+      height: 100% !important;
+      min-width: 0 !important;
+      min-height: 0 !important;
+      max-width: 100% !important;
+      max-height: 100% !important;
+      overflow: visible !important;
+    }
+
+    html[data-custom-layout-enabled="true"]
+      [data-custom-layout-item="player"]
+      [data-player-layout="mobile"] > div {
+      height: 100% !important;
+      min-height: 0 !important;
+    }
+
+    html[data-custom-layout-enabled="true"]
+      [data-custom-layout-item="player"]
+      [data-player-layout] > * {
+      min-height: 0 !important;
+    }
+
+    html[data-custom-layout-enabled="true"][data-custom-layout-page="room"] [data-custom-layout-room-host] {
+      padding-left: 0 !important;
+      padding-bottom: 0 !important;
+    }
+
+    html[data-custom-layout-enabled="true"][data-custom-layout-page="room"] [data-custom-layout-room-host] > [role="tabpanel"] {
+      overflow: visible !important;
+    }
+
+    html[data-custom-layout-enabled="true"][data-custom-layout-page="room"] [data-custom-layout-room-root="true"] {
+      position: fixed !important;
+      z-index: 10;
+      inset: 0 !important;
+      display: block !important;
+      width: 100% !important;
+      height: 100% !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+    }
+
+    html[data-custom-layout-enabled="true"][data-custom-layout-page="room"] [data-custom-layout-item="room-stage"],
+    html[data-custom-layout-enabled="true"][data-custom-layout-page="room"] [data-custom-layout-item="room-panel"] {
+      position: absolute !important;
+      z-index: 10;
+      top: var(--custom-room-stage-y) !important;
+      right: auto !important;
+      bottom: auto !important;
+      left: var(--custom-room-stage-x) !important;
+      width: var(--custom-room-stage-width) !important;
+      height: var(--custom-room-stage-height) !important;
+      min-height: 0 !important;
+      max-height: none !important;
+      min-width: 0 !important;
+      margin: 0 !important;
+      box-sizing: border-box !important;
+      overflow: hidden;
+    }
+
+    html[data-custom-layout-enabled="true"][data-custom-layout-page="room"] [data-custom-layout-item="room-stage"] {
+      container-type: size;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+
+    html[data-custom-layout-enabled="true"][data-custom-layout-page="room"] [data-custom-layout-item="room-stage"] > div,
+    html[data-custom-layout-enabled="true"][data-custom-layout-page="room"] [data-custom-layout-item="room-stage"] > div > section {
+      height: 100% !important;
+      min-height: 0 !important;
+    }
+
+    html[data-custom-layout-enabled="true"][data-custom-layout-page="room"] [data-custom-layout-item="room-stage"] [data-room-stage-record="true"] {
+      height: min(20rem, 42cqw, 40cqh, calc(100cqw - 4rem)) !important;
+      min-height: 9.5rem !important;
+    }
+
+    html[data-custom-layout-enabled="true"][data-custom-layout-page="room"] [data-custom-layout-item="room-stage"] [data-room-stage-record-surface="true"] {
+      width: min(20rem, 42cqw, 40cqh, calc(100cqw - 4rem)) !important;
+      height: 100% !important;
+      min-width: 9.5rem !important;
+      min-height: 9.5rem !important;
+    }
+
+    html[data-custom-layout-enabled="true"][data-custom-layout-page="room"] [data-custom-layout-item="room-panel"] {
+      z-index: 20;
+      top: var(--custom-room-panel-y) !important;
+      right: auto !important;
+      bottom: auto !important;
+      left: var(--custom-room-panel-x) !important;
+      width: var(--custom-room-panel-width) !important;
+      height: var(--custom-room-panel-height) !important;
+    }
+
+    html[data-custom-layout-sidebar-visible="false"] [data-custom-layout-item="sidebar"],
+    html[data-custom-layout-content-visible="false"] .custom-layout-content-region,
+    html[data-custom-layout-player-visible="false"] [data-custom-layout-item="player"],
+    html[data-custom-layout-room-stage-visible="false"] [data-custom-layout-item="room-stage"],
+    html[data-custom-layout-room-panel-visible="false"] [data-custom-layout-item="room-panel"] {
+      display: none !important;
+    }
+  }
+
+  @media (min-width: 640px) {
+    .workspace-page__inner {
+      padding-inline: 1.5rem;
+      padding-top: 2.5rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .workspace-page {
+      padding-bottom: 7rem;
+    }
+
+    .workspace-page__inner {
+      padding-inline: 2rem;
+      padding-top: 3.5rem;
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .workspace-surface,
+    .mobile-app-navigation {
+      background: var(--background-secondary);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+      animation-duration: 0.01ms;
+    }
+
+    html.theme-transitioning,
+    html.theme-transitioning body,
+    html.theme-transitioning body * {
+      transition-duration: 0.01ms !important;
+    }
+
+    .app-sidebar {
+      transition-duration: 0.01ms !important;
+    }
+
+    .app-sidebar__footer-control {
+      transition-duration: 0.01ms;
+    }
+
+    .mobile-app-route-view,
+    .mobile-player-panel {
+      animation-duration: 0.01ms;
+    }
+
+    .mobile-app-navigation__item {
+      transition-duration: 0.01ms;
+    }
+  }
+}
+
+@layer utilities {
+  .border-hairline {
+    border-width: 0.5px;
+  }
+  .glass-panel {
+    @apply border border-surface-border bg-surface backdrop-blur-xl;
+    box-shadow: var(--surface-shadow);
+  }
+  .glass-button {
+    @apply bg-surface hover:bg-surface-hover border border-surface-border backdrop-blur-md transition-colors;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .settings-page-scroll {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .settings-page-scroll::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+  /* Concise, delicate scrollbar that matches project theme and does not consume layout space */
+  .custom-scrollbar,
+  .thin-scrollbar,
+  .room-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar,
+  .thin-scrollbar::-webkit-scrollbar,
+  .room-scrollbar::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track,
+  .thin-scrollbar::-webkit-scrollbar-track,
+  .room-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb,
+  .thin-scrollbar::-webkit-scrollbar-thumb,
+  .room-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.18);
+    border-radius: 9999px;
+    transition: background-color 150ms ease-in-out;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover,
+  .thin-scrollbar::-webkit-scrollbar-thumb:hover,
+  .room-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.36);
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:active,
+  .thin-scrollbar::-webkit-scrollbar-thumb:active,
+  .room-scrollbar::-webkit-scrollbar-thumb:active {
+    background-color: rgba(255, 255, 255, 0.52);
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-corner,
+  .thin-scrollbar::-webkit-scrollbar-corner,
+  .room-scrollbar::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /* Light theme support */
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .custom-scrollbar,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .thin-scrollbar,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .room-scrollbar {
+    scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .custom-scrollbar::-webkit-scrollbar-thumb,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .thin-scrollbar::-webkit-scrollbar-thumb,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .room-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.18);
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .custom-scrollbar::-webkit-scrollbar-thumb:hover,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .thin-scrollbar::-webkit-scrollbar-thumb:hover,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .room-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.32);
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .custom-scrollbar::-webkit-scrollbar-thumb:active,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .thin-scrollbar::-webkit-scrollbar-thumb:active,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .room-scrollbar::-webkit-scrollbar-thumb:active {
+    background-color: rgba(0, 0, 0, 0.48);
+  }
+
+  /* Room workspace contextual scrollbar rules: default all non-hidden scrollbars to subtle 5px */
+  [data-custom-layout-room-root] *:not(.hide-scrollbar),
+  [data-custom-layout-room-host] *:not(.hide-scrollbar),
+  [data-testid="radio-room-root"] *:not(.hide-scrollbar),
+  [data-testid="request-room-root"] *:not(.hide-scrollbar) {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+  }
+
+  [data-custom-layout-room-root] *:not(.hide-scrollbar)::-webkit-scrollbar,
+  [data-custom-layout-room-host] *:not(.hide-scrollbar)::-webkit-scrollbar,
+  [data-testid="radio-room-root"] *:not(.hide-scrollbar)::-webkit-scrollbar,
+  [data-testid="request-room-root"] *:not(.hide-scrollbar)::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  [data-custom-layout-room-root] *:not(.hide-scrollbar)::-webkit-scrollbar-track,
+  [data-custom-layout-room-host] *:not(.hide-scrollbar)::-webkit-scrollbar-track,
+  [data-testid="radio-room-root"] *:not(.hide-scrollbar)::-webkit-scrollbar-track,
+  [data-testid="request-room-root"] *:not(.hide-scrollbar)::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  [data-custom-layout-room-root] *:not(.hide-scrollbar)::-webkit-scrollbar-thumb,
+  [data-custom-layout-room-host] *:not(.hide-scrollbar)::-webkit-scrollbar-thumb,
+  [data-testid="radio-room-root"] *:not(.hide-scrollbar)::-webkit-scrollbar-thumb,
+  [data-testid="request-room-root"] *:not(.hide-scrollbar)::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.18);
+    border-radius: 9999px;
+  }
+
+  [data-custom-layout-room-root] *:not(.hide-scrollbar)::-webkit-scrollbar-thumb:hover,
+  [data-custom-layout-room-host] *:not(.hide-scrollbar)::-webkit-scrollbar-thumb:hover,
+  [data-testid="radio-room-root"] *:not(.hide-scrollbar)::-webkit-scrollbar-thumb:hover,
+  [data-testid="request-room-root"] *:not(.hide-scrollbar)::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.36);
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [data-custom-layout-room-root] *:not(.hide-scrollbar),
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [data-custom-layout-room-host] *:not(.hide-scrollbar),
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [data-testid="radio-room-root"] *:not(.hide-scrollbar),
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [data-testid="request-room-root"] *:not(.hide-scrollbar) {
+    scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [data-custom-layout-room-root] *:not(.hide-scrollbar)::-webkit-scrollbar-thumb,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [data-custom-layout-room-host] *:not(.hide-scrollbar)::-webkit-scrollbar-thumb,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [data-testid="radio-room-root"] *:not(.hide-scrollbar)::-webkit-scrollbar-thumb,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [data-testid="request-room-root"] *:not(.hide-scrollbar)::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.18);
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [data-custom-layout-room-root] *:not(.hide-scrollbar)::-webkit-scrollbar-thumb:hover,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [data-custom-layout-room-host] *:not(.hide-scrollbar)::-webkit-scrollbar-thumb:hover,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [data-testid="radio-room-root"] *:not(.hide-scrollbar)::-webkit-scrollbar-thumb:hover,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [data-testid="request-room-root"] *:not(.hide-scrollbar)::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.32);
+  }
+
+  .announcement-marquee-container {
+    container-type: inline-size;
+  }
+
+  @keyframes announcement-marquee-single {
+    0% {
+      transform: translate3d(100cqw, 0, 0);
+    }
+    100% {
+      transform: translate3d(-100%, 0, 0);
+    }
+  }
+
+  .announcement-marquee-track {
+    display: inline-block;
+    white-space: nowrap;
+    will-change: transform;
+    animation-name: announcement-marquee-single;
+    animation-timing-function: linear;
+    animation-iteration-count: 1;
+    animation-fill-mode: forwards;
+  }
+
+  .announcement-marquee-track:hover {
+    animation-play-state: paused;
+  }
+
+  /* A few legacy surfaces still use fixed dark utility classes. Map those
+     classes to the active palette so the theme applies consistently. */
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-black"] {
+    background-color: var(--background) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="md:bg-black"] {
+    background-color: var(--background) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class*="bg-black/"]:not([class~="bg-black/0"]):not([class~="opacity-0"]) {
+    background-color: color-mix(in srgb, var(--background) 84%, transparent) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-black/0"] {
+    background-color: transparent !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class*="bg-[#"] {
+    background-color: var(--background-secondary) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-white"] {
+    color: var(--foreground) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-accent"][class~="text-white"] {
+    color: #ffffff !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class*="text-white/"] {
+    color: color-mix(in srgb, var(--foreground) 68%, transparent) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class*="hover:text-white"]:hover {
+    color: var(--foreground) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class*="border-white"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class*="divide-white"] {
+    border-color: var(--surface-border) !important;
+  }
+
+  /* Match actual utility tokens only. A substring selector also matches
+     hover-prefixed utilities and incorrectly paints a resting gray background. */
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-white/5"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-white/10"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-white/15"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-white/20"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-white/35"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-white/[0.02]"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-white/[0.025]"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-white/[0.03]"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-white/[0.035]"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-white/[0.04]"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-white/[0.05]"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-white/[0.06]"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-white/[0.07]"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-white/[0.08]"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-white/[0.12]"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-white/[0.14]"] {
+    background-color: var(--surface) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="hover:bg-white/5"]:hover,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="hover:bg-white/10"]:hover,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="hover:bg-white/15"]:hover,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="hover:bg-white/[0.06]"]:hover,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="hover:bg-white/[0.07]"]:hover,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="hover:bg-white/[0.08]"]:hover,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="hover:bg-white/[0.12]"]:hover {
+    background-color: var(--surface-hover) !important;
+  }
+
+  /* Filled surface classes on buttons were useful against the dark canvas;
+     light-mode controls stay clean and let their borders define the target. */
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) button[class~="bg-surface"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) button[class~="bg-surface/25"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) button[class~="bg-surface/40"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) button[class~="bg-surface/50"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) button[class~="bg-surface/60"] {
+    background-color: transparent !important;
+  }
+
+  /* Preserve a dimmed backdrop for dialogs while keeping black utility
+     classes usable for light structural surfaces and form controls. */
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-black/20"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-black/25"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-black/40"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-black/45"] {
+    background-color: color-mix(in srgb, var(--foreground) 5%, transparent) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-black/60"] {
+    background-color: rgba(15, 23, 42, 0.42) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-black/70"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-black/75"] {
+    background-color: rgba(15, 23, 42, 0.5) !important;
+  }
+
+  /* Secondary surfaces keep their dark-mode classes for the default theme,
+     but use a clean elevated layer and a softer daylight shadow here. */
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .light-dialog-surface,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .light-popover-surface,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .light-audio-surface {
+    background-color: var(--background-secondary) !important;
+    border-color: var(--surface-border) !important;
+    box-shadow: 0 18px 50px rgba(15, 23, 42, 0.14) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .light-overlay-control {
+    background-color: transparent !important;
+    border-color: var(--surface-border) !important;
+    color: var(--foreground) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .light-overlay-control:hover {
+    background-color: var(--surface-hover) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .light-control-surface {
+    background-color: transparent !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .light-control-surface:hover {
+    background-color: var(--surface-hover) !important;
+  }
+
+  /* Dark-mode button fills become transparent controls in the light theme;
+     hover rules still provide feedback without leaving a resting gray block. */
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) button[class~="bg-black"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) button[class~="bg-white/5"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) button[class~="bg-white/10"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) button[class~="bg-white/15"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) button[class~="bg-white/[0.025]"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) button[class~="bg-white/[0.03]"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) button[class~="bg-white/[0.04]"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) button[class~="bg-white/[0.05]"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) button[class~="bg-white/[0.06]"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) button[class~="bg-white/[0.08]"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) button[class~="bg-white/[0.12]"] {
+    background-color: transparent !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) button[class~="hover:bg-white/5"]:hover,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) button[class~="hover:bg-white/10"]:hover,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) button[class~="hover:bg-white/15"]:hover,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) button[class~="hover:bg-white/[0.06]"]:hover,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) button[class~="hover:bg-white/[0.07]"]:hover,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) button[class~="hover:bg-white/[0.08]"]:hover,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) button[class~="hover:bg-white/[0.12]"]:hover {
+    background-color: var(--surface-hover) !important;
+  }
+
+  .light-player-queue {
+    background-color: var(--background-secondary) !important;
+    border-color: var(--surface-border) !important;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55) !important;
+  }
+
+  .light-player-queue .light-player-queue-content {
+    background-color: var(--background-secondary) !important;
+  }
+
+  .light-player-queue-artwork {
+    background-color: var(--surface) !important;
+    border-color: var(--surface-border) !important;
+  }
+
+  .light-player-queue-pending {
+    background-color: color-mix(in srgb, var(--background-secondary) 86%, transparent) !important;
+  }
+
+  .light-player-queue-pending-pill {
+    background-color: var(--background-secondary) !important;
+    border-color: var(--surface-border) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .light-player-queue {
+    background-color: var(--background-secondary) !important;
+    border-color: var(--surface-border) !important;
+    box-shadow: 0 18px 50px rgba(15, 23, 42, 0.14) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .light-player-queue .light-player-queue-content {
+    background-color: var(--background-secondary) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .light-player-queue-artwork {
+    background-color: var(--surface) !important;
+    border-color: var(--surface-border) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .light-player-queue-pending {
+    background-color: color-mix(in srgb, var(--background-secondary) 86%, transparent) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .light-player-queue-pending-pill {
+    background-color: var(--background-secondary) !important;
+    border-color: var(--surface-border) !important;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12) !important;
+  }
+
+  /* Accent and destructive actions must keep their white label on a filled
+     color after the light theme remaps generic white text. */
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-accent/90"][class~="text-white"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-red-500"][class~="text-white"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="bg-red-600"][class~="text-white"] {
+    color: #ffffff !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-zinc-200"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-zinc-300"] {
+    color: var(--foreground) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-zinc-400"] {
+    color: var(--foreground-muted) !important;
+  }
+
+  /* White opacity utilities are tuned for a dark canvas in the source UI.
+     Re-map their common levels to the light foreground hierarchy. */
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-white/20"] {
+    color: color-mix(in srgb, var(--foreground) 40%, transparent) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-white/30"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-white/35"] {
+    color: color-mix(in srgb, var(--foreground) 52%, transparent) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-white/40"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-white/45"] {
+    color: color-mix(in srgb, var(--foreground) 60%, transparent) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-white/50"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-white/55"] {
+    color: color-mix(in srgb, var(--foreground) 68%, transparent) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-white/60"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-white/70"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-white/75"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-white/80"] {
+    color: color-mix(in srgb, var(--foreground) 82%, transparent) !important;
+  }
+
+  /* Status colors keep their meaning but gain enough contrast against white. */
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-amber-100"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-amber-100/65"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-amber-100/80"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-amber-200"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-amber-300"] {
+    color: #a16207 !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-emerald-200"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-emerald-300"] {
+    color: #047857 !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-sky-200"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-sky-300"] {
+    color: #0369a1 !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-red-200"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-red-300"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-red-400"] {
+    color: #b91c1c !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class~="text-green-400"] {
+    color: #15803d !important;
+  }
+
+  /* Room management surfaces are intentionally unstyled in dark mode and
+     inherit the workspace there. Give them a quiet elevated layer in light. */
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .material-surface {
+    background: color-mix(in srgb, var(--background-secondary) 92%, var(--background)) !important;
+    border-color: var(--surface-border) !important;
+    box-shadow: none !important;
+    color: var(--foreground);
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .material-surface-header {
+    background: color-mix(in srgb, var(--background-secondary) 88%, transparent) !important;
+    border-color: var(--surface-border) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    backdrop-filter: blur(18px) saturate(140%);
+  }
+
+  /* Artwork palettes are applied inline, so player chrome needs an explicit
+     light-mode surface override. Keep the artwork accents and record material. */
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [data-testid="bottom-player"] {
+    background-color: var(--background-secondary) !important;
+    border-color: var(--surface-border) !important;
+    color: var(--foreground);
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [data-testid="bottom-player"][data-mobile-variant="compact"] {
+    background-color: color-mix(in srgb, var(--background-secondary) 94%, var(--background)) !important;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.14);
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .mobile-app-navigation {
+    background: color-mix(in srgb, var(--background-secondary) 82%, transparent);
+    box-shadow: 0 -10px 30px color-mix(in srgb, #172033 10%, transparent);
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .mobile-app-navigation__item--active {
+    background: color-mix(in srgb, #005fca 10%, transparent);
+    color: #005fca;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [data-testid="mini-player-overlay"] {
+    background-color: var(--background-secondary) !important;
+    border-color: var(--surface-border) !important;
+    color: var(--foreground);
+    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.2);
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [data-testid="mini-player-overlay"] [data-player-header] {
+    border-color: var(--surface-border) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [data-testid="mini-player-overlay"] [data-player-header] [style] {
+    color: var(--foreground) !important;
+  }
+
+  /* The cover remains a dark, image-backed control surface in either theme. */
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [data-testid="mini-player-cover"] [class~="text-white"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [data-testid="mini-player-cover"] [class*="text-white/"] {
+    color: rgba(255, 255, 255, 0.9) !important;
+  }
+
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .light-popover-surface-arrow {
+    border-top-color: var(--background-secondary) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [data-testid="bottom-player"] [data-testid="player-queue-button"] [class~="text-white"] {
+    color: #ffffff !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [data-testid="square-album-cover"][class~="bg-accent"] [class~="text-white"] {
+    color: #ffffff !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .home-room-backdrop {
+    background-color: var(--background) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .home-room-grid {
+    background-image: linear-gradient(to right, rgba(15, 23, 42, 0.045) 1px, transparent 1px), linear-gradient(to bottom, rgba(15, 23, 42, 0.045) 1px, transparent 1px) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .immersive-player-overlay {
+    background-color: var(--background) !important;
+    color: var(--foreground);
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .immersive-player-overlay [data-immersive-wash] {
+    background: linear-gradient(112deg, var(--background) 0%, color-mix(in srgb, var(--background-secondary) 72%, var(--background)) 52%, var(--background-secondary) 100%) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .immersive-player-overlay [data-immersive-accent] {
+    background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent 46%, var(--surface-border)) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .immersive-player-overlay [class~="text-foreground"] {
+    color: var(--foreground) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .immersive-player-overlay [class~="text-foreground-muted"] {
+    color: var(--foreground-muted) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [role="dialog"][aria-label="沉浸式播放"] {
+    color: var(--foreground);
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [role="dialog"][aria-label="沉浸式播放"] [class~="text-foreground"] {
+    color: var(--foreground) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [role="dialog"][aria-label="沉浸式播放"] [class~="text-foreground-muted"] {
+    color: var(--foreground-muted) !important;
+  }
+
+  /* Keep text on the deliberately dark record/player materials bright after
+     the general white-text remap changes light structural surfaces. */
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class*="from-[#020202]"] [class~="text-white"],
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) [class*="from-[#020202]"] [class*="text-white/"] {
+    color: rgba(255, 255, 255, 0.86) !important;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) select,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) option {
+    color-scheme: light;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .netease-results-scroll,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .qqmusic-results-scroll {
+    scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .netease-results-scroll::-webkit-scrollbar-thumb,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .qqmusic-results-scroll::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.18);
+  }
+
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .netease-results-scroll::-webkit-scrollbar-thumb:hover,
+  :is(html[data-theme="light"], html[data-theme-mode="light"]) .qqmusic-results-scroll::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.32);
+  }
+
+  html[data-reduce-motion="true"] *,
+  html[data-reduce-motion="true"] *::before,
+  html[data-reduce-motion="true"] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .netease-results-scroll,
+  .qqmusic-results-scroll {
+    scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+    scrollbar-width: thin;
+  }
+  .netease-results-scroll::-webkit-scrollbar,
+  .qqmusic-results-scroll::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  .netease-results-scroll::-webkit-scrollbar-track,
+  .qqmusic-results-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .netease-results-scroll::-webkit-scrollbar-thumb,
+  .qqmusic-results-scroll::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.18);
+    border-radius: 9999px;
+    transition: background-color 150ms ease-in-out;
+  }
+  .netease-results-scroll::-webkit-scrollbar-thumb:hover,
+  .qqmusic-results-scroll::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.36);
+  }
+
+  @keyframes floatingParticle {
+    0% {
+      opacity: 0;
+      transform: translate3d(0, 0, 0) scale(0.6);
+    }
+    15% {
+      opacity: 1;
+      transform: translate3d(calc(var(--drift-x, 0px) * 0.3), -40px, 0) scale(1.1);
+    }
+    50% {
+      opacity: 0.95;
+      transform: translate3d(calc(var(--drift-x, 0px) * 0.7), -140px, 0) scale(1);
+    }
+    85% {
+      opacity: 0.7;
+      transform: translate3d(var(--drift-x, 0px), -240px, 0) scale(0.95);
+    }
+    100% {
+      opacity: 0;
+      transform: translate3d(calc(var(--drift-x, 0px) * 1.2), -320px, 0) scale(0.85);
+    }
+  }
+
+  .animate-floating-particle {
+    animation: floatingParticle 2.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  @keyframes twinkleStar {
+    0%, 100% {
+      opacity: 0.25;
+      transform: scale(0.75);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.25);
+    }
+  }
+
+  @keyframes pulseRadialWave {
+    0% {
+      transform: scale(1);
+      opacity: 0.9;
+    }
+    60% {
+      opacity: 0.45;
+    }
+    100% {
+      transform: scale(4);
+      opacity: 0;
+    }
+  }
+
+  @keyframes slowVinylRotate {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes floatDustParticle {
+    0% {
+      transform: translate3d(0, 0, 0);
+      opacity: 0.2;
+    }
+    50% {
+      transform: translate3d(var(--dust-x, 4px), -12px, 0);
+      opacity: 0.85;
+    }
+    100% {
+      transform: translate3d(calc(var(--dust-x, 4px) * -1), -24px, 0);
+      opacity: 0.1;
+    }
+  }
+}
+
+
+
+/* iOS Safari auto-zooms the page when focusing an input whose font-size is
+   below 16px. Individual inputs carry Tailwind font-size utilities, which
+   out-specificity a plain element rule, so this is scoped to phone widths and
+   uses !important deliberately. Textual controls only — sliders/checkboxes do
+   not trigger the zoom. */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* ── Z-index scale ─────────────────────────────────────────────────────────
+   Single source of truth for stacking order. Bars/overlays opt in with
+   var(--z-*); ad-hoc z-[N] magic numbers caused drift (modals painting under
+   the floating player, navigation over dialogs). Keep new surfaces on this
+   ladder and never invent a number between rungs. */
+:root {
+  --z-scrim-raised: 55;
+  /* fallback fixed layers (60/70/80) keep their literal values below */
+  --z-modal: 500;
+  --z-modal-high: 501;
+  --z-max: 9999;
+}
+
+/* Modal scrim + dialog surfaces: one class instead of seven copies of the
+   same long safe-area utility chain. */
+.light-modal-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  background: rgb(0 0 0 / 0.75);
+  backdrop-filter: blur(4px);
+  padding-top: calc(1rem + env(safe-area-inset-top));
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  padding-inline: 1rem;
+}
+
+@media (min-width: 640px) {
+  .light-modal-scrim {
+    padding: 1.5rem;
+  }
+}

@@ -1,0 +1,35 @@
+[[permission]]
+identifier = "allow-desktop-lyrics"
+description = "Allow desktop lyrics window commands"
+commands.allow = [
+    "toggle_desktop_lyrics",
+    "hide_desktop_lyrics_window",
+    "drag_desktop_lyrics_window",
+    "set_desktop_lyrics_size"
+]
+
+[[permission]]
+identifier = "allow-app-management"
+description = "Allow app version and window controls"
+commands.allow = [
+    "get_app_version",
+    "focus_main_window",
+    "open_external_url",
+    "set_ui_zoom"
+]
+
+[[permission]]
+identifier = "allow-system-media"
+description = "Allow system media transport"
+commands.allow = [
+    "system_media_update_meta",
+    "system_media_update_playback",
+    "system_media_clear"
+]
+
+[[permission]]
+identifier = "allow-native-download"
+description = "Allow direct native CDN downloads"
+commands.allow = [
+    "download_direct_native"
+]
