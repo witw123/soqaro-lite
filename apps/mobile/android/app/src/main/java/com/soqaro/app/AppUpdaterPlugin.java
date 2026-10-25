@@ -29,7 +29,7 @@ import java.io.File;
  */
 @CapacitorPlugin(name = "AppUpdater")
 public class AppUpdaterPlugin extends Plugin {
-    private static final String FILE_PROVIDER_AUTHORITY = "com.soqaro.app.fileprovider";
+    private static final String FILE_PROVIDER_AUTHORITY = "top.witw.soqaro.lite.fileprovider";
     private static final long STALE_DOWNLOAD_MS = 30 * 60 * 1000L;
 
     private long downloadId = -1;

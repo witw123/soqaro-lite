@@ -17,3 +17,9 @@ pnpm-debug.log*
 apps/desktop/src-tauri/target
 apps/mobile/android/app/build
 apps/mobile/android/.gradle
+
+**/.tauri
+*.key
+*.jks
+*.keystore
+keystore.properties

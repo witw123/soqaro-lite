@@ -40,9 +40,9 @@ import java.util.concurrent.Executors;
  * while active in a room or playing media, avoiding WebSocket/WebRTC disconnections.
  */
 public class SystemMediaService extends Service {
-    private static final String CHANNEL_ID = "soqaro_media";
+    private static final String CHANNEL_ID = "soqaro_lite_media";
     private static final int NOTIFICATION_ID = 42;
-    private static final String ACTION_MEDIA_COMMAND = "com.soqaro.app.SYSTEM_MEDIA_COMMAND";
+    private static final String ACTION_MEDIA_COMMAND = "top.witw.soqaro.lite.SYSTEM_MEDIA_COMMAND";
 
     private MediaSessionCompat session;
     private final ExecutorService imageExecutor = Executors.newSingleThreadExecutor();

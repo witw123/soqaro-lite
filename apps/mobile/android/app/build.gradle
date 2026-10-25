@@ -37,7 +37,7 @@ android {
     namespace "com.soqaro.app"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.soqaro.app"
+        applicationId "top.witw.soqaro.lite"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode appVersionCode
