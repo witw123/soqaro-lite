@@ -64,65 +64,13 @@ const themeInitScript = `(() => {
 
 export const viewport: Viewport = {
   themeColor: "#09090b",
-  // Cover mode is what makes env(safe-area-inset-*) report real values; the
-  // Capacitor shell loads this page as a remote URL, so the shell's own
-  // viewport meta never applies. Without it every inset padding in
-  // globals.css (bottom navigation, floating player, room bottom inset) is
-  // inert and content sits under the status bar / gesture bar.
   viewportFit: "cover"
 };
 
-// The Capacitor WebView offers no reachable devtools in release builds, so a
-// client-side exception there is an opaque "Application error" page. Capture
-// window-level errors, rejections, and console.error into an on-screen overlay
-// — active only inside the native shell, invisible in plain browsers.
-const shellErrorReporterScript = `(() => {
-  try {
-    if (!(window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform())) {
-      return;
-    }
-    const serialize = (value) => {
-      if (value instanceof Error) return value.stack || \`\${value.name}: \${value.message}\`;
-      if (typeof value === "object" && value !== null) {
-        try { return JSON.stringify(value); } catch { return String(value); }
-      }
-      return String(value);
-    };
-    const show = (heading, detail) => {
-      let box = document.getElementById("shell-error-overlay");
-      if (!box) {
-        box = document.createElement("pre");
-        box.id = "shell-error-overlay";
-        box.setAttribute("role", "alert");
-        box.style.cssText = "position:fixed;left:0;right:0;bottom:0;max-height:50%;overflow:auto;z-index:2147483647;margin:0;background:#2b0707;color:#ffb4b4;font:11px/1.45 monospace;padding:10px;white-space:pre-wrap;word-break:break-all;border-top:2px solid #ff5252;";
-        (document.body || document.documentElement).appendChild(box);
-      }
-      box.textContent += (box.textContent ? "\\n\\n" : "") + heading + "\\n" + detail;
-    };
-    window.addEventListener("error", (event) => {
-      const error = event.error;
-      show(
-        "[error]",
-        error instanceof Error ? (error.stack || error.message) : \`\${event.message} @ \${event.filename}:\${event.lineno}\`
-      );
-    });
-    window.addEventListener("unhandledrejection", (event) => {
-      show("[unhandledrejection]", serialize(event.reason));
-    });
-    const originalConsoleError = console.error.bind(console);
-    console.error = (...args) => {
-      try {
-        show("[console.error]", args.map(serialize).join(" "));
-      } catch {}
-      originalConsoleError(...args);
-    };
-  } catch {}
-})();`;
-
 export const metadata: Metadata = {
-  title: "Soqaro",
-  description: "与好友实时同步收听本地高保真音乐。Soqaro 通过房间状态同步和 WebRTC RTP Opus 媒体链路，提供浏览器优先的协作听歌体验。",
-  keywords: ["Soqaro", "音乐房", "一起听歌", "共享队列", "高保真音乐", "实时协作"],
+  title: "Soqaro Lite",
+  description: "本地多端 P2P 同步听歌工具，支持本地音乐库实时同步收听与无损音频协同。",
+  keywords: ["Soqaro Lite", "音乐房", "一起听歌", "共享队列", "高保真音乐", "P2P 同步"],
   manifest: "/manifest.webmanifest",
   referrer: "no-referrer"
 };
@@ -131,13 +79,19 @@ export default function RootLayout({
   children
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="zh-CN" suppressHydrationWarning>
+    <html
+      lang="zh-CN"
+      data-theme="dark"
+      data-theme-mode="dark"
+      data-sidebar-collapsed="true"
+      style={{ colorScheme: "dark" }}
+      suppressHydrationWarning
+    >
       <head>
         <meta name="referrer" content="no-referrer" />
         <Script id="theme-init" strategy="beforeInteractive">{themeInitScript}</Script>
-        <Script id="shell-error-reporter" strategy="beforeInteractive">{shellErrorReporterScript}</Script>
       </head>
-      <body className="font-sans antialiased">
+      <body className="font-sans antialiased" suppressHydrationWarning>
         <PersistentRoomRuntime>{children}</PersistentRoomRuntime>
       </body>
     </html>
