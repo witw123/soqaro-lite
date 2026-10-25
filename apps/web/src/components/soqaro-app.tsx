@@ -32,6 +32,7 @@ import {
   shouldCommitAwayRoomResume,
   storeAwayRoomId
 } from "@/lib/domain/away-room";
+import { buildRoomHref } from "@/lib/domain/room-url";
 
 const lastRoomStorageKey = "soqaro-last-room";
 const peerStorageKey = "soqaro-peer-id";
@@ -112,7 +113,7 @@ export function SoqaroApp({
     if (backgroundOnly && targetRoomId) {
       pendingRoomResumeRef.current = targetRoomId;
       requestAwayRoomResume(targetRoomId);
-      router.push(`/room/${targetRoomId}` as Route);
+      router.push(buildRoomHref(targetRoomId) as Route);
       return;
     }
 

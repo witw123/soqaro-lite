@@ -28,4 +28,13 @@ describe("playback ownership", () => {
     }
     expect(resolvePlaybackOwnership("/app", "one", true).runtimeRoomId).toBeNull();
   });
+
+  it("resolves room playback from query params when on /room", () => {
+    const params = new URLSearchParams("id=query-room");
+    expect(resolvePlaybackOwnership("/room", null, false, params)).toEqual({
+      owner: "room",
+      routeRoomId: "query-room",
+      runtimeRoomId: "query-room"
+    });
+  });
 });

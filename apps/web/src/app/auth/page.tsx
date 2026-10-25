@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { AuthPage } from "@/components/auth";
 
-export const revalidate = 0;
+export const dynamic = "force-static";
 
 export default function LoginPage() {
   return (

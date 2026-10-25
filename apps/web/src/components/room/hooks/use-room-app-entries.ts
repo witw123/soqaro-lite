@@ -1,6 +1,7 @@
 "use client";
 
 import { buildAppEntryHref, buildWorkspaceAuthHref } from "@/lib/domain/client-shell";
+import { buildRoomHref } from "@/lib/domain/room-url";
 
 type UseRoomAppEntriesInput = {
   initialRoomId: string | null;
@@ -9,7 +10,7 @@ type UseRoomAppEntriesInput = {
 export function useRoomAppEntries({ initialRoomId }: UseRoomAppEntriesInput) {
   const workspaceEntryHref = buildAppEntryHref();
   const authEntryHref = buildWorkspaceAuthHref({
-    redirectTo: initialRoomId ? `/room/${initialRoomId}` : workspaceEntryHref
+    redirectTo: initialRoomId ? buildRoomHref(initialRoomId) : workspaceEntryHref
   });
 
   return {

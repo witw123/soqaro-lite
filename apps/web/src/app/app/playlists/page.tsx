@@ -1,6 +1,6 @@
 import { PlaylistsLibraryPage } from "@/components/playlists";
 
-export const revalidate = 0;
+export const dynamic = "force-static";
 
 export default function PlaylistsPage() {
   return <PlaylistsLibraryPage />;

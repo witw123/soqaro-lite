@@ -19,7 +19,7 @@ export function useCustomLayoutRuntime(pathname: string | null) {
   useEffect(() => {
     const root = document.documentElement;
     const pageId = getCustomLayoutPageId(pathname);
-    const isWorkspaceRoute = pathname === "/rooms" || pathname?.startsWith("/app") === true || pathname?.startsWith("/room/") === true;
+    const isWorkspaceRoute = pathname === "/" || pathname === "/rooms" || pathname === "/room" || pathname?.startsWith("/app") === true || pathname?.startsWith("/room/") === true;
 
     const clearLayoutVariables = () => {
       for (const itemId of layoutItemIds) {

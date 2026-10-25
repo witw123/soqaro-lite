@@ -14,6 +14,7 @@ import {
   ExternalLinkIcon
 } from "@/components/icons/DiscoverIcons";
 import { roomTypeLabel } from "./room-home-types";
+import { buildRoomHref } from "@/lib/domain/room-url";
 
 export function RoomCenterOverview({ activeSession }: { activeSession: AuthSession }) {
   const [showAllOwned, setShowAllOwned] = useState(false);
@@ -152,7 +153,7 @@ function OwnedRoomCard({ snapshot }: { snapshot: RoomSnapshot }) {
   return (
     <Link
       className="group rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 transition-all hover:bg-white/[0.05] hover:border-white/10"
-      href={`/room/${room.id}`}
+      href={buildRoomHref(room.id)}
     >
       <div className="flex items-center justify-between gap-3">
         <span className="min-w-0 truncate font-semibold text-sm text-foreground group-hover:text-accent transition-colors">
@@ -179,7 +180,7 @@ function RecentRoomCard({ room }: { room: RoomActivitySummary }) {
   return (
     <Link
       className="group rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 transition-all hover:bg-white/[0.05] hover:border-white/10"
-      href={`/room/${room.roomId}`}
+      href={buildRoomHref(room.roomId)}
     >
       <div className="flex items-center justify-between gap-3">
         <span className="min-w-0 truncate font-semibold text-sm text-foreground group-hover:text-accent transition-colors">

@@ -30,6 +30,7 @@ import {
   readAwayRoomId,
   requestAwayRoomResume
 } from "@/lib/domain/away-room";
+import { buildRoomHref } from "@/lib/domain/room-url";
 
 const lastRoomStorageKey = "soqaro-last-room";
 const emptyRooms: RoomDirectoryItem[] = [];
@@ -49,7 +50,6 @@ export function RoomsHomePage({
 }: RoomsHomePageProps = {}) {
   const router = useRouter();
   const workspaceEntryHref = buildAppEntryHref();
-  const buildRoomHref = (roomId: string) => `/room/${roomId}`;
   const authEntryHref = buildWorkspaceAuthHref({
     redirectTo: workspaceEntryHref
   });

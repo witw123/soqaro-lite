@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { LocalPlayerProvider } from "@/features/playback/local-player-context";
@@ -77,8 +77,18 @@ function RoomRuntime({ children }: { children: ReactNode }) {
     };
   }, [isLyricsWindow]);
 
+  const [searchQuery, setSearchQuery] = useState(() => (typeof window !== "undefined" ? window.location.search : ""));
+  useEffect(() => {
+    const updateSearch = () => setSearchQuery(window.location.search);
+    updateSearch();
+    window.addEventListener("popstate", updateSearch);
+    return () => window.removeEventListener("popstate", updateSearch);
+  }, [pathname]);
+
+  const searchParams = useMemo(() => new URLSearchParams(searchQuery), [searchQuery]);
+
   const { owner, routeRoomId, runtimeRoomId } = resolvePlaybackOwnership(
-    pathname, awayRoomId, isLyricsWindow
+    pathname, awayRoomId, isLyricsWindow, searchParams
   );
   const { result: updateResult, isPromptOpen: isUpdatePromptOpen, dismissPrompt: dismissUpdatePrompt } = useAppUpdate({
     autoCheck: !isLyricsWindow

@@ -7,6 +7,7 @@ import { AppSidebar } from "./AppSidebar";
 import { AwayRoomReturnButton } from "@/components/room-home";
 import { MobileAppNavigation } from "./MobileAppNavigation";
 import { awayRoomChangeEvent, readAwayRoomId, requestAwayRoomResume } from "@/lib/domain/away-room";
+import { buildRoomHref } from "@/lib/domain/room-url";
 import { useCustomLayoutRuntime } from "@/features/settings/use-custom-layout-runtime";
 import { WorkspacePageActivity } from "@/features/workspace/page-activity";
 
@@ -30,7 +31,7 @@ export function AppRouteShell({ children }: { children: ReactNode }) {
   function handleResumeAwayRoom() {
     if (!awayRoomId) return;
     requestAwayRoomResume(awayRoomId);
-    router.push(`/room/${awayRoomId}` as Route);
+    router.push(buildRoomHref(awayRoomId) as Route);
   }
 
   return (
@@ -57,7 +58,7 @@ function PersistentAppRouteViews({
   pathname: string | null;
   children: ReactNode;
 }) {
-  const routeKey = pathname || "/app";
+  const routeKey = !pathname || pathname === "/" ? "/app" : pathname;
   const routeCache = useRef(new Map<string, ReactNode>());
   const visibleRoute = useRef<string | null>(null);
   const lastChildren = useRef<ReactNode | undefined>(undefined);

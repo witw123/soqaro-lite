@@ -1,4 +1,4 @@
-﻿import type { PlaybackMode } from "@soqaro/shared";
+import type { PlaybackMode } from "@soqaro/shared";
 import { create } from "zustand";
 import { invokeTauri, isTauriRuntime } from "@/lib/desktop/tauri";
 import { EQUALIZER_PRESETS, type EqualizerPresetId } from "../playback/audio-equalizer";
@@ -423,7 +423,7 @@ export function normalizeCustomLayoutSettings(value: unknown): CustomLayoutSetti
 }
 
 export function getCustomLayoutPageId(pathname: string | null): CustomLayoutPageId {
-  if (pathname?.startsWith("/room/")) return "room";
+  if (pathname === "/room" || pathname?.startsWith("/room/")) return "room";
   if (pathname?.startsWith("/app/discover")) return "discover";
   if (pathname?.startsWith("/app/playlists")) return "playlists";
   if (pathname?.startsWith("/app/favorites")) return "favorites";
