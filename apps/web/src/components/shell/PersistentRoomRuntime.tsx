@@ -85,7 +85,8 @@ function RoomRuntime({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("popstate", updateSearch);
   }, [pathname]);
 
-  const searchParams = useMemo(() => new URLSearchParams(searchQuery), [searchQuery]);
+  const currentSearch = typeof window !== "undefined" && window.location.search ? window.location.search : searchQuery;
+  const searchParams = useMemo(() => new URLSearchParams(currentSearch), [currentSearch]);
 
   const { owner, routeRoomId, runtimeRoomId } = resolvePlaybackOwnership(
     pathname, awayRoomId, isLyricsWindow, searchParams
@@ -102,6 +103,7 @@ function RoomRuntime({ children }: { children: ReactNode }) {
           {owner === "local" ? <AppPersistentPlayer /> : null}
           {runtimeRoomId ? (
             <SoqaroApp
+              key={runtimeRoomId}
               backgroundOnly={!routeRoomId}
               initialRoomId={runtimeRoomId}
               workspaceOnly

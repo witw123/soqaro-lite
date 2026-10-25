@@ -9,7 +9,7 @@ import { soqaroApi } from "@/lib/network/soqaro-api";
 import { PersonalOverview } from "./PersonalOverview";
 import { ListeningProfileOverview } from "./ListeningProfileOverview";
 import { RoomCenterOverview } from "@/components/room-home";
-import { NeteaseSourcePanel, QqMusicSourcePanel } from "@/components/room/ProviderSourcePanel";
+import { NeteaseSourcePanel, QqMusicSourcePanel, BilibiliSourcePanel } from "@/components/room/ProviderSourcePanel";
 import { ProviderDataImportSection } from "./ProviderDataImportSection";
 import { TasteColdStartDialog } from "@/components/discovery/TasteColdStartDialog";
 import {
@@ -139,18 +139,10 @@ export function ProviderAccountsPage() {
           <div className="rounded-xl border border-surface-border bg-surface/40 p-3.5 sm:p-5 space-y-6">
             <section>
               <h3 className="mb-3 text-sm font-semibold text-foreground">音乐平台账号</h3>
-              <div className="grid min-w-0 gap-4 lg:grid-cols-2">
-                {process.env.NEXT_PUBLIC_NETEASE_ENABLED === "true" ? (
-                  <NeteaseSourcePanel activeSession={activeSession} mode="account" />
-                ) : null}
-                {process.env.NEXT_PUBLIC_QQMUSIC_ENABLED === "true" ? (
-                  <QqMusicSourcePanel activeSession={activeSession} mode="account" />
-                ) : null}
-                {process.env.NEXT_PUBLIC_NETEASE_ENABLED !== "true" && process.env.NEXT_PUBLIC_QQMUSIC_ENABLED !== "true" ? (
-                  <div className="rounded-xl border border-surface-border bg-surface/40 p-6 text-sm text-foreground-muted">
-                    当前没有启用第三方音乐平台。
-                  </div>
-                ) : null}
+              <div className="grid min-w-0 gap-4 lg:grid-cols-3">
+                <NeteaseSourcePanel activeSession={activeSession} mode="account" />
+                <QqMusicSourcePanel activeSession={activeSession} mode="account" />
+                <BilibiliSourcePanel activeSession={activeSession} />
               </div>
             </section>
             <section>

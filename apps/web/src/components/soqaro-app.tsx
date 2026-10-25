@@ -33,6 +33,7 @@ import {
   storeAwayRoomId
 } from "@/lib/domain/away-room";
 import { buildRoomHref } from "@/lib/domain/room-url";
+import { consumeRoomSnapshotHandoff } from "@/lib/domain/room-snapshot-handoff";
 
 const lastRoomStorageKey = "soqaro-last-room";
 const peerStorageKey = "soqaro-peer-id";
@@ -55,7 +56,19 @@ export function SoqaroApp({
 
   const [roomState, dispatchRoomStateEvent] = useReducer(
     roomStateReducer,
-    initialRoomStateStore
+    undefined,
+    () => {
+      if (initialRoomId) {
+        const handoff = consumeRoomSnapshotHandoff(initialRoomId);
+        if (handoff) {
+          return {
+            ...initialRoomStateStore,
+            snapshot: handoff
+          };
+        }
+      }
+      return initialRoomStateStore;
+    }
   );
   const roomSnapshot = roomState.snapshot;
   const [peerId, setPeerId] = useState("");

@@ -66,6 +66,14 @@ export function dispatchLocalReaction(payload: {
   window.dispatchEvent(
     new CustomEvent(localReactionDispatchEvent, { detail: payload })
   );
+  try {
+    const raw = window.localStorage.getItem("soqaro-interaction-stats");
+    const current = raw ? JSON.parse(raw) : { sentLikes: 0, sentApplause: 0, receivedReactions: 0 };
+    if (payload.reaction === "like") current.sentLikes = (current.sentLikes ?? 0) + 1;
+    else if (payload.reaction === "applause") current.sentApplause = (current.sentApplause ?? 0) + 1;
+    else current.receivedReactions = (current.receivedReactions ?? 0) + 1;
+    window.localStorage.setItem("soqaro-interaction-stats", JSON.stringify(current));
+  } catch {}
 }
 
 export function RoomReactionOverlay({

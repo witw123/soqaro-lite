@@ -2,7 +2,7 @@ import type { ClientToServerEvents, ServerToClientEvents } from "@soqaro/shared"
 import { io, type Socket } from "socket.io-client";
 import { createLocalRoomSocket } from "./local-room-socket";
 
-const localHostnames = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
+const localHostnames = new Set(["localhost", "127.0.0.1", "::1", "[::1]", "tauri.localhost"]);
 
 function normalizeConfiguredWsBaseUrl(rawUrl: string) {
   return rawUrl.trim().replace(/\/$/, "");
@@ -64,9 +64,18 @@ function resolveCurrentHostname(): string {
 export function createRoomSocket() {
   const configuredWsBaseUrl = process.env.NEXT_PUBLIC_WS_URL?.trim();
   const currentHostname = resolveCurrentHostname();
-  const isLocalStandalone = !configuredWsBaseUrl && isLocalHostname(currentHostname);
+  let hasRemoteConfig = false;
+  if (configuredWsBaseUrl) {
+    try {
+      const parsed = new URL(configuredWsBaseUrl, "http://localhost");
+      hasRemoteConfig = !isLocalHostname(parsed.hostname);
+    } catch {
+      hasRemoteConfig = false;
+    }
+  }
+  const isLocalStandalone = !hasRemoteConfig && isLocalHostname(currentHostname);
 
-  if (isLocalStandalone) {
+  if (isLocalStandalone && process.env.NODE_ENV !== "test") {
     return createLocalRoomSocket();
   }
 

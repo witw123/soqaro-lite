@@ -55,6 +55,7 @@ type ProviderSourceAdapter<TrackT extends ProviderTrackCandidate, AccountT exten
     startQrLogin: () => Promise<{ attemptId: string; qrimg: string; expiresAt: string }>;
     searchTracks: (query: string) => Promise<{ items: TrackT[] }>;
     disconnect: () => Promise<unknown>;
+    saveAccount?: (account: { cookie?: string; nickname?: string }) => Promise<unknown>;
   };
 };
 
@@ -84,7 +85,8 @@ const neteaseAdapter: ProviderSourceAdapter<NeteaseTrackCandidate, NeteaseAccoun
     getQrStatus: (attemptId) => soqaroApi.getNeteaseQrStatus(attemptId),
     startQrLogin: () => soqaroApi.startNeteaseQrLogin(),
     searchTracks: (query) => soqaroApi.searchNeteaseTracks(query),
-    disconnect: () => soqaroApi.disconnectNeteaseAccount()
+    disconnect: () => soqaroApi.disconnectNeteaseAccount(),
+    saveAccount: (account) => soqaroApi.saveNeteaseAccount(account)
   }
 };
 
@@ -116,7 +118,8 @@ const qqmusicAdapter: ProviderSourceAdapter<QqMusicTrackCandidate, QqMusicAccoun
     getQrStatus: (attemptId) => soqaroApi.getQqMusicQrStatus(attemptId),
     startQrLogin: () => soqaroApi.startQqMusicQrLogin(),
     searchTracks: (query) => soqaroApi.searchQqMusicTracks(query),
-    disconnect: () => soqaroApi.disconnectQqMusicAccount()
+    disconnect: () => soqaroApi.disconnectQqMusicAccount(),
+    saveAccount: (account) => soqaroApi.saveQqMusicAccount(account)
   }
 };
 
@@ -147,6 +150,9 @@ function ProviderSourcePanelBase<TrackT extends ProviderTrackCandidate, AccountT
   const [results, setResults] = useState<TrackT[]>([]);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showManualInput, setShowManualInput] = useState(false);
+  const [manualCookie, setManualCookie] = useState("");
+  const [isSavingManual, setIsSavingManual] = useState(false);
 
   useEffect(() => {
     if (!activeSession) {
@@ -303,16 +309,63 @@ function ProviderSourcePanelBase<TrackT extends ProviderTrackCandidate, AccountT
             解除绑定
           </Button>
         ) : (
-          <Button
-            size="sm"
-            disabled={pendingAction !== null}
-            onClick={() => void startQrLogin()}
-            type="button"
-          >
-            {pendingAction === "qr" ? "生成中…" : "扫码绑定"}
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={pendingAction !== null}
+              onClick={() => setShowManualInput((v) => !v)}
+              type="button"
+            >
+              {showManualInput ? "取消填写" : "填写凭据"}
+            </Button>
+            <Button
+              size="sm"
+              disabled={pendingAction !== null}
+              onClick={() => void startQrLogin()}
+              type="button"
+            >
+              {pendingAction === "qr" ? "生成中…" : "扫码绑定"}
+            </Button>
+          </div>
         )}
       </div>
+
+      {showManualInput && !displayedAccount?.connected ? (
+        <div className="flex flex-col gap-2 pt-2 border-t border-surface-border text-xs">
+          <input
+            type="text"
+            className="w-full h-8 px-2.5 rounded-lg border border-surface-border bg-background text-foreground text-xs focus:outline-hidden focus:ring-1 focus:ring-accent"
+            placeholder="粘贴 Cookie 文本 (或 MUSIC_U)"
+            value={manualCookie}
+            onChange={(e) => setManualCookie(e.target.value)}
+          />
+          <div className="flex items-center gap-2 justify-end">
+            <Button variant="ghost" size="sm" onClick={() => setShowManualInput(false)} type="button">
+              取消
+            </Button>
+            <Button
+              size="sm"
+              disabled={!manualCookie.trim() || isSavingManual}
+              onClick={async () => {
+                if (!adapter.api.saveAccount) return;
+                setIsSavingManual(true);
+                try {
+                  const saved = await adapter.api.saveAccount({ cookie: manualCookie.trim() });
+                  setAccount(saved as AccountT);
+                  setShowManualInput(false);
+                  setManualCookie("");
+                } finally {
+                  setIsSavingManual(false);
+                }
+              }}
+              type="button"
+            >
+              {isSavingManual ? "保存中" : "确认绑定"}
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {qrSession ? (
         <div className="flex flex-col items-center gap-3 border-t border-surface-border pt-4 sm:flex-row sm:items-start">
@@ -444,4 +497,82 @@ export function NeteaseSourcePanel(props: ProviderSourcePanelProps<NeteaseTrackC
 /** QQ 音乐面板:类型安全的薄包装,行为全部在 ProviderSourcePanelBase。 */
 export function QqMusicSourcePanel(props: ProviderSourcePanelProps<QqMusicTrackCandidate>) {
   return <ProviderSourcePanelBase adapter={qqmusicAdapter} {...props} />;
+}
+
+/** 哔哩哔哩面板:用于配置 SESSDATA 凭据以解析高清音频及导入个人收藏。 */
+export function BilibiliSourcePanel({ activeSession }: { activeSession: AuthSession | null }) {
+  const [account, setAccount] = useState<{ connected: boolean; uname: string | null; uid: string | null }>({
+    connected: false,
+    uname: null,
+    uid: null
+  });
+  const [showInput, setShowInput] = useState(false);
+  const [sessdata, setSessdata] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    void soqaroApi.getBilibiliAccount().then(setAccount);
+  }, []);
+
+  const handleSave = async () => {
+    if (!sessdata.trim()) return;
+    setIsSubmitting(true);
+    try {
+      const saved = await soqaroApi.saveBilibiliAccount({ sessdata: sessdata.trim() });
+      setAccount(saved);
+      setShowInput(false);
+      setSessdata("");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    await soqaroApi.disconnectBilibiliAccount();
+    setAccount({ connected: false, uname: null, uid: null });
+  };
+
+  if (!activeSession) return null;
+
+  return (
+    <section className="flex w-full min-w-0 flex-col gap-4 rounded-xl border border-surface-border bg-surface/40 p-3 sm:p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold text-foreground">哔哩哔哩</h2>
+          <p className="mt-1 text-xs text-foreground-muted">
+            {account.connected ? `已绑定 ${account.uname ?? "哔哩哔哩账号"}` : "未绑定哔哩哔哩凭据"}
+          </p>
+        </div>
+        {account.connected ? (
+          <Button variant="ghost" size="sm" onClick={() => void handleDisconnect()} type="button">
+            解除绑定
+          </Button>
+        ) : (
+          <Button size="sm" onClick={() => setShowInput((v) => !v)} type="button">
+            {showInput ? "取消填写" : "填写凭据"}
+          </Button>
+        )}
+      </div>
+
+      {showInput && !account.connected ? (
+        <div className="flex flex-col gap-2 pt-2 border-t border-surface-border text-xs">
+          <input
+            type="text"
+            className="w-full h-8 px-2.5 rounded-lg border border-surface-border bg-background text-foreground text-xs focus:outline-hidden focus:ring-1 focus:ring-accent"
+            placeholder="粘贴 SESSDATA 或完整 Cookie"
+            value={sessdata}
+            onChange={(e) => setSessdata(e.target.value)}
+          />
+          <div className="flex items-center gap-2 justify-end">
+            <Button variant="ghost" size="sm" onClick={() => setShowInput(false)} type="button">
+              取消
+            </Button>
+            <Button size="sm" disabled={!sessdata.trim() || isSubmitting} onClick={() => void handleSave()} type="button">
+              {isSubmitting ? "保存中" : "确认绑定"}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
 }

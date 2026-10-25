@@ -33,6 +33,7 @@ import type {
   PlaybackMode,
   PlaybackSnapshot,
   Playlist,
+  QueueItem,
   RoomChatHistoryResponse,
   RoomDirectoryItem,
   RoomJoinResponse,
@@ -57,6 +58,13 @@ import type {
   UpdateRoomRequest
 } from "@soqaro/shared";
 import { apiBaseUrl } from "./api-client";
+import {
+  createLocalPlaylist,
+  deleteLocalPlaylist,
+  listLocalPlaylists,
+  updateLocalPlaylist,
+  type LocalPlaylistRecord
+} from "@/features/playlist/local-playlist";
 import {
   downloadDirectTrack,
   notifyPlaylistsChanged,
@@ -145,19 +153,76 @@ async function downloadQualityProviderTrack(
   });
 }
 
+function getCurrentSessionInfo(): { userId: string; nickname: string } {
+  if (typeof window !== "undefined") {
+    try {
+      const raw = window.localStorage.getItem("soqaro-session") || window.sessionStorage.getItem("soqaro-session");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.userId) {
+          return {
+            userId: parsed.userId,
+            nickname: parsed.nickname || parsed.username || "本地用户"
+          };
+        }
+      }
+    } catch {}
+  }
+  return { userId: "local-user", nickname: "本地用户" };
+}
+
+function recordRoomVisit(snapshot: RoomSnapshot) {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = window.localStorage.getItem("soqaro-recent-rooms");
+    const list: RoomSnapshot[] = raw ? JSON.parse(raw) : [];
+    const filtered = list.filter((item) => item.room.id !== snapshot.room.id);
+    window.localStorage.setItem("soqaro-recent-rooms", JSON.stringify([snapshot, ...filtered].slice(0, 20)));
+
+    const activityRaw = window.localStorage.getItem("soqaro-room-activities");
+    const activities: RoomActivitySummary[] = activityRaw ? JSON.parse(activityRaw) : [];
+    const newActivity: RoomActivitySummary = {
+      roomId: snapshot.room.id,
+      roomName: snapshot.room.name ?? "本地房间",
+      joinCode: snapshot.room.joinCode,
+      durationMs: 0,
+      lastJoinedAt: new Date().toISOString(),
+      isActive: true,
+      roomType: snapshot.room.roomType
+    };
+    window.localStorage.setItem("soqaro-room-activities", JSON.stringify([newActivity, ...activities].slice(0, 50)));
+  } catch {}
+}
+
+function recordRoomCreated(snapshot: RoomSnapshot) {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = window.localStorage.getItem("soqaro-owned-rooms");
+    const list: string[] = raw ? JSON.parse(raw) : [];
+    if (!list.includes(snapshot.room.id)) {
+      window.localStorage.setItem("soqaro-owned-rooms", JSON.stringify([snapshot.room.id, ...list]));
+    }
+  } catch {}
+}
+
 function createLocalRoomSnapshot(
   roomId: string,
   joinCode: string,
   name: string = "本地房间",
   description: string | null = null,
   roomType: RoomType = "interactive",
-  visibility: "public" | "private" = "public"
+  visibility: "public" | "private" = "public",
+  hostId?: string,
+  hostNickname?: string
 ): RoomSnapshot {
+  const session = getCurrentSessionInfo();
+  const actualHostId = hostId || session.userId || "local-user";
+  const actualHostNickname = hostNickname || session.nickname || "房主";
   const now = new Date().toISOString();
   return {
     room: {
       id: roomId,
-      hostId: "local-user",
+      hostId: actualHostId,
       joinCode,
       name,
       description,
@@ -175,15 +240,15 @@ function createLocalRoomSnapshot(
       },
       members: [
         {
-          id: "local-user",
-          nickname: "房主",
+          id: actualHostId,
+          nickname: actualHostNickname,
           role: "host",
           joinedAt: now,
           peerId: null,
           presenceState: "online"
         }
       ],
-      directoryHostNickname: "房主",
+      directoryHostNickname: actualHostNickname,
       directoryMemberCount: 1,
       directoryOnlineMemberCount: 1,
       directoryIsMember: true,
@@ -209,33 +274,80 @@ function createLocalRoomSnapshot(
   };
 }
 
+function getLocalRoomSnapshot(roomId: string): RoomSnapshot | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(`soqaro-room-${roomId}`);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return null;
+}
+
 function saveLocalRoomSnapshot(roomId: string, snapshot: RoomSnapshot) {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(`soqaro-room-${roomId}`, JSON.stringify(snapshot));
     const raw = window.localStorage.getItem("soqaro-lite-rooms");
-    if (raw) {
-      const list: RoomDirectoryItem[] = JSON.parse(raw);
-      const index = list.findIndex((item) => item.room.id === roomId);
-      if (index >= 0) {
-        list[index].room.name = snapshot.room.name ?? list[index].room.name;
-        list[index].room.description = snapshot.room.description ?? list[index].room.description;
-        list[index].room.visibility = snapshot.room.visibility;
-        list[index].room.playbackStatus = snapshot.room.playback?.status ?? "paused";
-        const currentTrack = snapshot.room.playback?.currentTrackId
-          ? snapshot.tracks.find((t) => t.id === snapshot.room.playback?.currentTrackId)
-          : null;
-        list[index].room.directoryNowPlaying = currentTrack
-          ? {
-              title: currentTrack.title,
-              artist: currentTrack.artist,
-              artworkUrl: currentTrack.artworkUrl ?? null
-            }
-          : null;
-        window.localStorage.setItem("soqaro-lite-rooms", JSON.stringify(list));
-      }
+    const list: RoomDirectoryItem[] = raw ? JSON.parse(raw) : [];
+    const index = list.findIndex((item) => item.room.id === roomId);
+    const currentTrack = snapshot.room.playback?.currentTrackId
+      ? snapshot.tracks.find((t) => t.id === snapshot.room.playback?.currentTrackId)
+      : null;
+    const nowPlaying = currentTrack
+      ? {
+          title: currentTrack.title,
+          artist: currentTrack.artist,
+          artworkUrl: currentTrack.artworkUrl ?? null
+        }
+      : null;
+
+    if (index >= 0) {
+      list[index].room.name = snapshot.room.name ?? list[index].room.name;
+      list[index].room.description = snapshot.room.description ?? list[index].room.description;
+      list[index].room.visibility = snapshot.room.visibility;
+      list[index].room.playbackStatus = snapshot.room.playback?.status ?? "paused";
+      list[index].room.directoryMemberCount = snapshot.room.members.length;
+      list[index].room.directoryOnlineMemberCount = snapshot.room.members.filter((m) => m.presenceState !== "offline").length;
+      list[index].room.directoryNowPlaying = nowPlaying;
+    } else {
+      list.unshift({
+        room: {
+          id: roomId,
+          joinCode: snapshot.room.joinCode,
+          name: snapshot.room.name ?? "本地房间",
+          description: snapshot.room.description ?? null,
+          hasPassword: Boolean(snapshot.room.hasPassword),
+          visibility: snapshot.room.visibility,
+          roomType: snapshot.room.roomType,
+          directoryHostNickname: snapshot.room.directoryHostNickname ?? "本地用户",
+          directoryMemberCount: snapshot.room.members.length,
+          directoryOnlineMemberCount: snapshot.room.members.filter((m) => m.presenceState !== "offline").length,
+          directoryIsMember: true,
+          directoryQueueDepth: snapshot.queue.length,
+          directoryPendingRequestCount: snapshot.room.requests?.filter((r) => r.status === "pending").length ?? 0,
+          directoryBroadcastState: "off_air",
+          directoryNowPlaying: nowPlaying,
+          playbackStatus: snapshot.room.playback?.status ?? "paused"
+        }
+      });
     }
+    window.localStorage.setItem("soqaro-lite-rooms", JSON.stringify(list));
   } catch {}
+}
+
+function toApiPlaylist(record: LocalPlaylistRecord, ownerId = "local-user"): Playlist {
+  return {
+    id: record.id,
+    ownerId,
+    title: record.title,
+    description: record.description,
+    coverUrl: null,
+    tags: [],
+    isCollaborative: false,
+    trackIds: record.trackIds,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt
+  };
 }
 
 export const soqaroApi = {
@@ -307,6 +419,7 @@ export const soqaroApi = {
     password?: string;
     newMemberPermissions?: RoomMemberPermissions;
   }): Promise<RoomSnapshot> => {
+    const session = getCurrentSessionInfo();
     const roomId = "room-" + Math.random().toString(36).slice(2, 9);
     const joinCode = Math.floor(100000 + Math.random() * 900000).toString();
     const snapshot = createLocalRoomSnapshot(
@@ -315,50 +428,83 @@ export const soqaroApi = {
       input.name?.trim() || "本地房间",
       input.description?.trim() || null,
       input.roomType || "interactive",
-      input.visibility || "public"
+      input.visibility || "public",
+      session.userId,
+      session.nickname
     );
     if (input.newMemberPermissions) {
       snapshot.room.newMemberPermissions = input.newMemberPermissions;
     }
-    if (typeof window !== "undefined") {
-      try {
-        const raw = window.localStorage.getItem("soqaro-lite-rooms");
-        const list: RoomDirectoryItem[] = raw ? JSON.parse(raw) : [];
-        const item: RoomDirectoryItem = {
-          room: {
-            id: roomId,
-            joinCode,
-            name: snapshot.room.name ?? "本地房间",
-            description: snapshot.room.description ?? null,
-            hasPassword: false,
-            visibility: snapshot.room.visibility,
-            roomType: snapshot.room.roomType,
-            directoryHostNickname: "房主",
-            directoryMemberCount: 1,
-            directoryOnlineMemberCount: 1,
-            directoryIsMember: true,
-            directoryQueueDepth: 0,
-            directoryPendingRequestCount: 0,
-            directoryBroadcastState: "off_air",
-            directoryNowPlaying: null,
-            playbackStatus: "paused"
-          }
-        };
-        window.localStorage.setItem("soqaro-lite-rooms", JSON.stringify([item, ...list]));
-        window.localStorage.setItem(`soqaro-room-${roomId}`, JSON.stringify(snapshot));
-      } catch {}
-    }
+    saveLocalRoomSnapshot(roomId, snapshot);
+    recordRoomCreated(snapshot);
+    recordRoomVisit(snapshot);
     return snapshot;
   },
-  getRecentRoom: async (): Promise<RoomSnapshot | null> => null,
-  getRecentRooms: async (): Promise<RoomSnapshot[]> => [],
-  getRoomActivity: async (): Promise<RoomActivitySummary[]> => [],
-  listOwnedRooms: async (): Promise<RoomSnapshot[]> => [],
-  getRoomInteractionStats: async (): Promise<RoomInteractionStats> => ({
-    sentLikes: 0,
-    sentApplause: 0,
-    receivedReactions: 0
-  }),
+  getRecentRoom: async (): Promise<RoomSnapshot | null> => {
+    const list = await soqaroApi.getRecentRooms();
+    return list[0] ?? null;
+  },
+  getRecentRooms: async (): Promise<RoomSnapshot[]> => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem("soqaro-recent-rooms");
+        if (raw) {
+          const list: RoomSnapshot[] = JSON.parse(raw);
+          if (Array.isArray(list)) return list;
+        }
+      } catch {}
+    }
+    return [];
+  },
+  getRoomActivity: async (): Promise<RoomActivitySummary[]> => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem("soqaro-room-activities");
+        if (raw) {
+          const list: RoomActivitySummary[] = JSON.parse(raw);
+          if (Array.isArray(list)) return list;
+        }
+      } catch {}
+    }
+    return [];
+  },
+  listOwnedRooms: async (): Promise<RoomSnapshot[]> => {
+    if (typeof window !== "undefined") {
+      try {
+        const session = getCurrentSessionInfo();
+        const rawOwned = window.localStorage.getItem("soqaro-owned-rooms");
+        const ownedIds: string[] = rawOwned ? JSON.parse(rawOwned) : [];
+        const rawRooms = window.localStorage.getItem("soqaro-lite-rooms");
+        const list: RoomDirectoryItem[] = rawRooms ? JSON.parse(rawRooms) : [];
+        const results: RoomSnapshot[] = [];
+
+        for (const item of list) {
+          const roomRaw = window.localStorage.getItem(`soqaro-room-${item.room.id}`);
+          if (roomRaw) {
+            const snap: RoomSnapshot = JSON.parse(roomRaw);
+            if (snap.room.hostId === session.userId || ownedIds.includes(item.room.id)) {
+              results.push(snap);
+            }
+          }
+        }
+        return results;
+      } catch {}
+    }
+    return [];
+  },
+  getRoomInteractionStats: async (): Promise<RoomInteractionStats> => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem("soqaro-interaction-stats");
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
+    return {
+      sentLikes: 0,
+      sentApplause: 0,
+      receivedReactions: 0
+    };
+  },
   recoverRoom: async (roomId: string): Promise<RoomSnapshot | null> => {
     return soqaroApi.getRoom(roomId);
   },
@@ -376,7 +522,26 @@ export const soqaroApi = {
   },
   joinRoomByCode: async (joinCode: string, _password?: string): Promise<RoomJoinResponse> => {
     const code = joinCode.trim();
-    const snapshot = createLocalRoomSnapshot(code, code, `房间 ${code}`);
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem("soqaro-lite-rooms");
+        if (raw) {
+          const list: RoomDirectoryItem[] = JSON.parse(raw);
+          const found = list.find((item) => item.room.joinCode === code || item.room.id === code);
+          if (found) {
+            const snapshot = await soqaroApi.joinRoom(found.room.id);
+            return {
+              roomId: found.room.id,
+              roomRevision: snapshot.room.roomRevision ?? 1,
+              room: snapshot.room
+            };
+          }
+        }
+      } catch {}
+    }
+    const session = getCurrentSessionInfo();
+    const snapshot = createLocalRoomSnapshot(code, code, `房间 ${code}`, null, "interactive", "public", session.userId, session.nickname);
+    saveLocalRoomSnapshot(code, snapshot);
     return {
       roomId: code,
       roomRevision: 1,
@@ -384,27 +549,71 @@ export const soqaroApi = {
     };
   },
   joinRoom: async (roomId: string, _password?: string): Promise<RoomSnapshot> => {
+    let snapshot: RoomSnapshot | null = null;
     if (typeof window !== "undefined") {
       try {
         const raw = window.localStorage.getItem(`soqaro-room-${roomId}`);
-        if (raw) return JSON.parse(raw);
+        if (raw) snapshot = JSON.parse(raw);
       } catch {}
     }
-    const snapshot = createLocalRoomSnapshot(roomId, roomId.replace(/^room-/, ""), `房间 ${roomId}`);
-    saveLocalRoomSnapshot(roomId, snapshot);
+    const session = getCurrentSessionInfo();
+    if (!snapshot) {
+      snapshot = createLocalRoomSnapshot(roomId, roomId.replace(/^room-/, ""), `房间 ${roomId}`, null, "interactive", "public", session.userId, session.nickname);
+      saveLocalRoomSnapshot(roomId, snapshot);
+    } else {
+      if (!snapshot.room.members.some((m) => m.id === session.userId)) {
+        snapshot.room.members.push({
+          id: session.userId,
+          nickname: session.nickname,
+          role: snapshot.room.hostId === session.userId ? "host" : "member",
+          joinedAt: new Date().toISOString(),
+          peerId: null,
+          presenceState: "online"
+        });
+        snapshot.room.directoryMemberCount = snapshot.room.members.length;
+        snapshot.room.directoryOnlineMemberCount = snapshot.room.members.filter((m) => m.presenceState !== "offline").length;
+        saveLocalRoomSnapshot(roomId, snapshot);
+      }
+    }
+    recordRoomVisit(snapshot);
     return snapshot;
   },
   getRoom: async (roomId: string): Promise<RoomSnapshot> => {
     return soqaroApi.joinRoom(roomId);
   },
-  listRoomChatHistory: async (_roomId: string, _before?: string): Promise<RoomChatHistoryResponse> => ({
-    messages: [],
-    nextCursor: null
-  }),
-  deleteRoomChatMessage: async (roomId: string, messageId: string) => ({
-    roomId,
-    messageId
-  }),
+  listRoomChatHistory: async (roomId: string, _before?: string): Promise<RoomChatHistoryResponse> => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem(`soqaro-chat-${roomId}`);
+        if (raw) {
+          const messages = JSON.parse(raw);
+          if (Array.isArray(messages)) return { messages, nextCursor: null };
+        }
+      } catch {}
+    }
+    return {
+      messages: [],
+      nextCursor: null
+    };
+  },
+  deleteRoomChatMessage: async (roomId: string, messageId: string) => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem(`soqaro-chat-${roomId}`);
+        if (raw) {
+          const messages = JSON.parse(raw);
+          if (Array.isArray(messages)) {
+            const filtered = messages.filter((m: any) => m.id !== messageId);
+            window.localStorage.setItem(`soqaro-chat-${roomId}`, JSON.stringify(filtered));
+          }
+        }
+      } catch {}
+    }
+    return {
+      roomId,
+      messageId
+    };
+  },
   syncRoom: async (roomId: string, _sinceRevision = 0): Promise<RoomSyncResponse> => {
     let snapshot: RoomSnapshot | null = null;
     if (typeof window !== "undefined") {
@@ -415,8 +624,9 @@ export const soqaroApi = {
         }
       } catch {}
     }
+    const session = getCurrentSessionInfo();
     if (!snapshot) {
-      snapshot = createLocalRoomSnapshot(roomId, roomId.replace(/^room-/, ""), `房间 ${roomId}`);
+      snapshot = createLocalRoomSnapshot(roomId, roomId.replace(/^room-/, ""), `房间 ${roomId}`, null, "interactive", "public", session.userId, session.nickname);
       saveLocalRoomSnapshot(roomId, snapshot);
     }
     return {
@@ -433,73 +643,174 @@ export const soqaroApi = {
     if (input.name !== undefined) snapshot.room.name = input.name;
     if (input.description !== undefined) snapshot.room.description = input.description;
     if (input.visibility !== undefined) snapshot.room.visibility = input.visibility;
+    if (input.newMemberPermissions !== undefined) snapshot.room.newMemberPermissions = input.newMemberPermissions;
     snapshot.room.roomRevision = (snapshot.room.roomRevision ?? 1) + 1;
     saveLocalRoomSnapshot(roomId, snapshot);
     return snapshot;
   },
-  listRoomRequests: async (_roomId: string): Promise<RoomRequest[]> => [],
+  listRoomRequests: async (roomId: string): Promise<RoomRequest[]> => {
+    const snapshot = await soqaroApi.getRoom(roomId);
+    return snapshot.room.requests ?? [];
+  },
   createRoomRequest: async (
     roomId: string,
     input: Omit<RoomRequest, "id" | "roomId" | "requesterId" | "requesterName" | "status" | "createdAt">
-  ): Promise<RoomRequest> => ({
-    id: "req-" + Math.random().toString(36).slice(2, 9),
-    roomId,
-    requesterId: "local-user",
-    requesterName: "本地用户",
-    status: "approved",
-    createdAt: new Date().toISOString(),
-    ...input
-  }),
-  approveRoomRequest: async (_roomId: string, requestId: string): Promise<RoomRequest> => ({
-    id: requestId,
-    roomId: "",
-    requesterId: "local-user",
-    requesterName: "本地用户",
-    provider: "local",
-    providerTrackId: "local-track",
-    title: "曲目",
-    artist: "歌手",
-    album: null,
-    durationMs: 0,
-    artworkUrl: null,
-    status: "approved",
-    createdAt: new Date().toISOString()
-  }),
-  rejectRoomRequest: async (_roomId: string, requestId: string): Promise<RoomRequest> => ({
-    id: requestId,
-    roomId: "",
-    requesterId: "local-user",
-    requesterName: "本地用户",
-    provider: "local",
-    providerTrackId: "local-track",
-    title: "曲目",
-    artist: "歌手",
-    album: null,
-    durationMs: 0,
-    artworkUrl: null,
-    status: "rejected",
-    createdAt: new Date().toISOString()
-  }),
-  getRoomReactionCounts: async (_roomId: string, _trackId?: string | null) => ({
-    like: 0,
-    applause: 0,
-    fire: 0,
-    sparkle: 0
-  }),
+  ): Promise<RoomRequest> => {
+    const snapshot = await soqaroApi.getRoom(roomId);
+    const session = getCurrentSessionInfo();
+    const reqItem: RoomRequest = {
+      id: "req-" + Math.random().toString(36).slice(2, 9),
+      roomId,
+      requesterId: session.userId,
+      requesterName: session.nickname,
+      status: "pending",
+      createdAt: new Date().toISOString(),
+      ...input
+    };
+    if (!snapshot.room.requests) {
+      snapshot.room.requests = [];
+    }
+    snapshot.room.requests.unshift(reqItem);
+    snapshot.room.roomRevision = (snapshot.room.roomRevision ?? 1) + 1;
+    saveLocalRoomSnapshot(roomId, snapshot);
+    return reqItem;
+  },
+  approveRoomRequest: async (roomId: string, requestId: string): Promise<RoomRequest> => {
+    const snapshot = await soqaroApi.getRoom(roomId);
+    const req = snapshot.room.requests?.find((r) => r.id === requestId);
+    if (req) {
+      req.status = "approved";
+      const trackId = `track-req-${req.id}`;
+      const trackMeta: TrackMeta = {
+        id: trackId,
+        title: req.title,
+        artist: req.artist,
+        album: req.album,
+        durationMs: req.durationMs,
+        artworkUrl: req.artworkUrl,
+        ownerSessionId: req.requesterId,
+        ownerNickname: req.requesterName,
+        sourceType: (req.provider as any) || "local_upload",
+        fileHash: `hash-${trackId}`,
+        sourceRef: req.provider === "local" ? undefined : ({ provider: req.provider as any, trackId: req.providerTrackId } as any)
+      } as TrackMeta;
+      if (!snapshot.tracks.some((t) => t.id === trackId)) {
+        snapshot.tracks.push(trackMeta);
+      }
+      snapshot.queue.push({
+        id: "qi-" + Math.random().toString(36).slice(2, 9),
+        trackId,
+        requestedBy: req.requesterName,
+        requestedById: req.requesterId,
+        source: "manual",
+        position: snapshot.queue.length + 1,
+        sourceSeedTrackId: null,
+        createdAt: new Date().toISOString()
+      });
+      snapshot.room.playback.queueVersion = (snapshot.room.playback.queueVersion ?? 1) + 1;
+      snapshot.room.roomRevision = (snapshot.room.roomRevision ?? 1) + 1;
+      saveLocalRoomSnapshot(roomId, snapshot);
+      return req;
+    }
+    return {
+      id: requestId,
+      roomId,
+      requesterId: "local-user",
+      requesterName: "本地用户",
+      provider: "local",
+      providerTrackId: "local-track",
+      title: "曲目",
+      artist: "歌手",
+      album: null,
+      durationMs: 0,
+      artworkUrl: null,
+      status: "approved",
+      createdAt: new Date().toISOString()
+    };
+  },
+  rejectRoomRequest: async (roomId: string, requestId: string): Promise<RoomRequest> => {
+    const snapshot = await soqaroApi.getRoom(roomId);
+    const req = snapshot.room.requests?.find((r) => r.id === requestId);
+    if (req) {
+      req.status = "rejected";
+      snapshot.room.roomRevision = (snapshot.room.roomRevision ?? 1) + 1;
+      saveLocalRoomSnapshot(roomId, snapshot);
+      return req;
+    }
+    return {
+      id: requestId,
+      roomId,
+      requesterId: "local-user",
+      requesterName: "本地用户",
+      provider: "local",
+      providerTrackId: "local-track",
+      title: "曲目",
+      artist: "歌手",
+      album: null,
+      durationMs: 0,
+      artworkUrl: null,
+      status: "rejected",
+      createdAt: new Date().toISOString()
+    };
+  },
+  getRoomReactionCounts: async (roomId: string, trackId?: string | null) => {
+    if (typeof window !== "undefined") {
+      try {
+        const key = `soqaro-reactions-${roomId}${trackId ? `-${trackId}` : ""}`;
+        const raw = window.localStorage.getItem(key);
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
+    return {
+      like: 0,
+      applause: 0,
+      fire: 0,
+      sparkle: 0
+    };
+  },
   updateRoomMemberPermissions: async (
     roomId: string,
-    _memberId: string,
+    memberId: string,
     permissions: RoomMemberPermissions
   ): Promise<RoomSnapshot> => {
     const snapshot = await soqaroApi.getRoom(roomId);
+    const member = snapshot.room.members.find((m) => m.id === memberId);
+    if (member) {
+      member.permissions = permissions;
+    }
     snapshot.room.newMemberPermissions = permissions;
+    snapshot.room.roomRevision = (snapshot.room.roomRevision ?? 1) + 1;
     saveLocalRoomSnapshot(roomId, snapshot);
     return snapshot;
   },
-  removeRoomMember: async (roomId: string, _memberId: string): Promise<RoomSnapshot> => {
-    return soqaroApi.getRoom(roomId);
+  removeRoomMember: async (roomId: string, memberId: string): Promise<RoomSnapshot> => {
+    const snapshot = await soqaroApi.getRoom(roomId);
+    snapshot.room.members = snapshot.room.members.filter((m) => m.id !== memberId);
+    snapshot.room.directoryMemberCount = snapshot.room.members.length;
+    snapshot.room.directoryOnlineMemberCount = snapshot.room.members.filter((m) => m.presenceState !== "offline").length;
+    snapshot.room.roomRevision = (snapshot.room.roomRevision ?? 1) + 1;
+    saveLocalRoomSnapshot(roomId, snapshot);
+    return snapshot;
   },
-  leaveRoom: async (_roomId: string) => ({ ok: true }),
+  leaveRoom: async (roomId: string) => {
+    if (typeof window !== "undefined") {
+      try {
+        const session = getCurrentSessionInfo();
+        const raw = window.localStorage.getItem(`soqaro-room-${roomId}`);
+        if (raw) {
+          const snapshot: RoomSnapshot = JSON.parse(raw);
+          snapshot.room.members = snapshot.room.members.filter((m) => m.id !== session.userId);
+          snapshot.room.directoryMemberCount = snapshot.room.members.length;
+          snapshot.room.directoryOnlineMemberCount = snapshot.room.members.filter((m) => m.presenceState !== "offline").length;
+          saveLocalRoomSnapshot(roomId, snapshot);
+        }
+        if (window.localStorage.getItem("soqaro-last-room") === roomId) {
+          window.localStorage.removeItem("soqaro-last-room");
+        }
+      } catch {}
+    }
+    return { ok: true };
+  },
   deleteRoom: async (roomId: string): Promise<{ ok: boolean }> => {
     if (typeof window !== "undefined") {
       try {
@@ -509,6 +820,9 @@ export const soqaroApi = {
           const list: RoomDirectoryItem[] = JSON.parse(raw);
           const filtered = list.filter((r) => r.room.id !== roomId);
           window.localStorage.setItem("soqaro-lite-rooms", JSON.stringify(filtered));
+        }
+        if (window.localStorage.getItem("soqaro-last-room") === roomId) {
+          window.localStorage.removeItem("soqaro-last-room");
         }
       } catch {}
     }
@@ -644,13 +958,30 @@ export const soqaroApi = {
   updateRadioAutopilot: async (roomId: string, payload: { enabled: boolean }): Promise<RoomSnapshot> => {
     const snapshot = await soqaroApi.getRoom(roomId);
     snapshot.room.radioAutopilot = { enabled: payload.enabled };
+    snapshot.room.roomRevision = (snapshot.room.roomRevision ?? 1) + 1;
     saveLocalRoomSnapshot(roomId, snapshot);
     return snapshot;
   },
-  insertRadioAutopilotNextTrack: async (roomId: string, _payload: { trackId: string }): Promise<RadioAutopilotNextTrackMutationResponse> => {
+  insertRadioAutopilotNextTrack: async (roomId: string, payload: { trackId: string }): Promise<RadioAutopilotNextTrackMutationResponse> => {
     const snapshot = await soqaroApi.getRoom(roomId);
+    const newItemId = "qi-auto-" + Math.random().toString(36).slice(2, 9);
+    const currentIdx = snapshot.queue.findIndex((item) => item.id === snapshot.room.playback.currentQueueItemId);
+    const insertAt = currentIdx >= 0 ? currentIdx + 1 : snapshot.queue.length;
+    snapshot.queue.splice(insertAt, 0, {
+      id: newItemId,
+      trackId: payload.trackId,
+      requestedBy: "电台巡航",
+      requestedById: "system-radio",
+      source: "autopilot",
+      position: insertAt + 1,
+      sourceSeedTrackId: null,
+      createdAt: new Date().toISOString()
+    });
+    snapshot.room.playback.queueVersion = (snapshot.room.playback.queueVersion ?? 1) + 1;
+    snapshot.room.roomRevision = (snapshot.room.roomRevision ?? 1) + 1;
+    saveLocalRoomSnapshot(roomId, snapshot);
     return {
-      insertedQueueItemId: "",
+      insertedQueueItemId: newItemId,
       queue: snapshot.queue,
       playback: snapshot.room.playback
     };
@@ -763,20 +1094,65 @@ export const soqaroApi = {
     ttlSeconds: 86400,
     source: "stun-only"
   }),
-  getNeteaseAccount: () =>
-    request<NeteaseAccountStatus>("/v1/providers/netease/account"),
-  startNeteaseQrLogin: () =>
-    request<NeteaseQrStartResponse>("/v1/providers/netease/account/qr/start", {
-      method: "POST"
-    }),
-  getNeteaseQrStatus: (attemptId: string) =>
-    request<NeteaseQrStatusResponse>(
-      `/v1/providers/netease/account/qr/${encodeURIComponent(attemptId)}/status`
-    ),
-  disconnectNeteaseAccount: () =>
-    request<{ ok: boolean }>("/v1/providers/netease/account", {
-      method: "DELETE"
-    }),
+  getNeteaseAccount: async (): Promise<NeteaseAccountStatus> => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem("soqaro-provider-netease-account");
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
+    return {
+      connected: false,
+      neteaseUserId: null,
+      nickname: null,
+      avatarUrl: null,
+      lastValidatedAt: null
+    };
+  },
+  startNeteaseQrLogin: async (): Promise<NeteaseQrStartResponse> => {
+    const attemptId = "ne-qr-" + Math.random().toString(36).slice(2, 9);
+    const qrText = `https://music.163.com/login?codekey=${attemptId}`;
+    const qrimg = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrText)}`;
+    return {
+      attemptId,
+      qrimg,
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+    };
+  },
+  getNeteaseQrStatus: async (attemptId: string): Promise<NeteaseQrStatusResponse> => {
+    const current = await soqaroApi.getNeteaseAccount();
+    if (current.connected) {
+      return { status: "connected", account: current };
+    }
+    return { status: "pending", message: "请使用网易云音乐扫码确认" };
+  },
+  disconnectNeteaseAccount: async (): Promise<{ ok: boolean }> => {
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.removeItem("soqaro-provider-netease-account");
+        window.localStorage.removeItem("soqaro-provider-netease-cookie");
+      } catch {}
+    }
+    return { ok: true };
+  },
+  saveNeteaseAccount: async (account: Partial<NeteaseAccountStatus> & { cookie?: string }): Promise<NeteaseAccountStatus> => {
+    const full: NeteaseAccountStatus = {
+      connected: true,
+      neteaseUserId: account.neteaseUserId ?? "local-netease",
+      nickname: account.nickname ?? "网易云用户",
+      avatarUrl: account.avatarUrl ?? null,
+      lastValidatedAt: new Date().toISOString()
+    };
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem("soqaro-provider-netease-account", JSON.stringify(full));
+        if (account.cookie) {
+          window.localStorage.setItem("soqaro-provider-netease-cookie", account.cookie);
+        }
+      } catch {}
+    }
+    return full;
+  },
   searchNeteaseTracks: (keywords: string, options?: { limit?: number; offset?: number }) =>
     searchProviderTracks<NeteaseSearchResponse>("netease", keywords, options),
   searchNeteaseSuggestions: (keywords: string) =>
@@ -827,10 +1203,65 @@ export const soqaroApi = {
     signal?: AbortSignal,
     onProgress?: (loaded: number, total: number | null) => void
   ) => downloadQualityProviderTrack("netease", trackId, quality, signal, onProgress),
-  getQqMusicAccount: () => request<QqMusicAccountStatus>("/v1/providers/qqmusic/account"),
-  startQqMusicQrLogin: () => request<QqMusicQrStartResponse>("/v1/providers/qqmusic/account/qr/start", { method: "POST" }),
-  getQqMusicQrStatus: (attemptId: string) => request<QqMusicQrStatusResponse>(`/v1/providers/qqmusic/account/qr/${encodeURIComponent(attemptId)}/status`),
-  disconnectQqMusicAccount: () => request<{ ok: boolean }>("/v1/providers/qqmusic/account", { method: "DELETE" }),
+  getQqMusicAccount: async (): Promise<QqMusicAccountStatus> => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem("soqaro-provider-qqmusic-account");
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
+    return {
+      connected: false,
+      qqMusicUserId: null,
+      nickname: null,
+      avatarUrl: null,
+      lastValidatedAt: null
+    };
+  },
+  startQqMusicQrLogin: async (): Promise<QqMusicQrStartResponse> => {
+    const attemptId = "qq-qr-" + Math.random().toString(36).slice(2, 9);
+    const qrText = `https://y.qq.com/m/client/login?code=${attemptId}`;
+    const qrimg = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrText)}`;
+    return {
+      attemptId,
+      qrimg,
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+    };
+  },
+  getQqMusicQrStatus: async (_attemptId: string): Promise<QqMusicQrStatusResponse> => {
+    const current = await soqaroApi.getQqMusicAccount();
+    if (current.connected) {
+      return { status: "connected", account: current };
+    }
+    return { status: "pending", message: "请使用 QQ 音乐扫码确认" };
+  },
+  disconnectQqMusicAccount: async (): Promise<{ ok: boolean }> => {
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.removeItem("soqaro-provider-qqmusic-account");
+        window.localStorage.removeItem("soqaro-provider-qqmusic-cookie");
+      } catch {}
+    }
+    return { ok: true };
+  },
+  saveQqMusicAccount: async (account: Partial<QqMusicAccountStatus> & { cookie?: string }): Promise<QqMusicAccountStatus> => {
+    const full: QqMusicAccountStatus = {
+      connected: true,
+      qqMusicUserId: account.qqMusicUserId ?? "local-qqmusic",
+      nickname: account.nickname ?? "QQ 音乐用户",
+      avatarUrl: account.avatarUrl ?? null,
+      lastValidatedAt: new Date().toISOString()
+    };
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem("soqaro-provider-qqmusic-account", JSON.stringify(full));
+        if (account.cookie) {
+          window.localStorage.setItem("soqaro-provider-qqmusic-cookie", account.cookie);
+        }
+      } catch {}
+    }
+    return full;
+  },
   searchQqMusicTracks: (keywords: string, options?: { limit?: number; offset?: number }) =>
     searchProviderTracks<QqMusicSearchResponse>("qqmusic", keywords, options),
   searchQqMusicSuggestions: (keywords: string) =>
@@ -869,39 +1300,130 @@ export const soqaroApi = {
     request<ProviderPlaylistDetail>(`/v1/providers/qqmusic/playlists/${encodeURIComponent(playlistId)}`),
   getQqMusicAlbum: (albumId: string) =>
     request<ProviderAlbumDetail>(`/v1/providers/qqmusic/albums/${encodeURIComponent(albumId)}`),
-  listFavoriteAlbums: () => request<ProviderAlbumFavorite[]>("/v1/favorites/albums"),
-  saveFavoriteAlbum: (album: Omit<ProviderAlbumFavorite, "id" | "createdAt" | "updatedAt">) =>
-    request<ProviderAlbumFavorite>("/v1/favorites/albums", {
-      method: "PUT",
-      body: JSON.stringify(album)
-    }),
-  deleteFavoriteAlbum: (provider: Provider, providerAlbumId: string) =>
-    request<{ ok: boolean }>(
-      `/v1/favorites/albums/${provider}/${encodeURIComponent(providerAlbumId)}`,
-      { method: "DELETE" }
-    ),
-  listFavoriteTracks: (signal?: AbortSignal) => request<ProviderTrackFavorite[]>("/v1/favorites/tracks", { signal }),
-  saveFavoriteTrack: (track: ProviderTrackCandidate) =>
-    request<ProviderTrackFavorite>("/v1/favorites/tracks", {
-      method: "PUT",
-      body: JSON.stringify(track)
-    }),
-  deleteFavoriteTrack: (provider: Provider, providerTrackId: string) =>
-    request<{ ok: boolean }>(
-      `/v1/favorites/tracks/${provider}/${encodeURIComponent(providerTrackId)}`,
-      { method: "DELETE" }
-    ),
-  listFavoriteArtists: () => request<ProviderArtistFavorite[]>("/v1/favorites/artists"),
-  saveFavoriteArtist: (artist: ProviderArtistSummary) =>
-    request<ProviderArtistFavorite>("/v1/favorites/artists", {
-      method: "PUT",
-      body: JSON.stringify(artist)
-    }),
-  deleteFavoriteArtist: (provider: Provider, providerArtistId: string) =>
-    request<{ ok: boolean }>(
-      `/v1/favorites/artists/${provider}/${encodeURIComponent(providerArtistId)}`,
-      { method: "DELETE" }
-    ),
+  listFavoriteAlbums: async (): Promise<ProviderAlbumFavorite[]> => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem("soqaro-favorite-albums");
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
+    return [];
+  },
+  saveFavoriteAlbum: async (album: Omit<ProviderAlbumFavorite, "id" | "createdAt" | "updatedAt">): Promise<ProviderAlbumFavorite> => {
+    const now = new Date().toISOString();
+    const item: ProviderAlbumFavorite = {
+      id: `fav-album-${album.provider}-${album.providerAlbumId}`,
+      createdAt: now,
+      updatedAt: now,
+      ...album
+    };
+    if (typeof window !== "undefined") {
+      try {
+        const list = await soqaroApi.listFavoriteAlbums();
+        const filtered = list.filter((a) => !(a.provider === album.provider && a.providerAlbumId === album.providerAlbumId));
+        filtered.unshift(item);
+        window.localStorage.setItem("soqaro-favorite-albums", JSON.stringify(filtered));
+      } catch {}
+    }
+    return item;
+  },
+  deleteFavoriteAlbum: async (provider: Provider, providerAlbumId: string): Promise<{ ok: boolean }> => {
+    if (typeof window !== "undefined") {
+      try {
+        const list = await soqaroApi.listFavoriteAlbums();
+        const filtered = list.filter((a) => !(a.provider === provider && a.providerAlbumId === providerAlbumId));
+        window.localStorage.setItem("soqaro-favorite-albums", JSON.stringify(filtered));
+      } catch {}
+    }
+    return { ok: true };
+  },
+  listFavoriteTracks: async (_signal?: AbortSignal): Promise<ProviderTrackFavorite[]> => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem("soqaro-favorite-tracks");
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
+    return [];
+  },
+  saveFavoriteTrack: async (track: ProviderTrackCandidate): Promise<ProviderTrackFavorite> => {
+    const now = new Date().toISOString();
+    const item: ProviderTrackFavorite = {
+      id: `fav-track-${track.provider}-${track.providerTrackId}`,
+      provider: track.provider,
+      providerTrackId: track.providerTrackId,
+      access: track.access ?? "unknown",
+      quality: track.quality ?? null,
+      title: track.title,
+      artist: track.artist,
+      album: track.album ?? null,
+      providerAlbumId: track.providerAlbumId ?? null,
+      artworkUrl: track.artworkUrl ?? null,
+      durationMs: track.durationMs,
+      createdAt: now,
+      updatedAt: now
+    };
+    if (typeof window !== "undefined") {
+      try {
+        const list = await soqaroApi.listFavoriteTracks();
+        const filtered = list.filter((t) => !(t.provider === track.provider && t.providerTrackId === track.providerTrackId));
+        filtered.unshift(item);
+        window.localStorage.setItem("soqaro-favorite-tracks", JSON.stringify(filtered));
+      } catch {}
+    }
+    return item;
+  },
+  deleteFavoriteTrack: async (provider: Provider, providerTrackId: string): Promise<{ ok: boolean }> => {
+    if (typeof window !== "undefined") {
+      try {
+        const list = await soqaroApi.listFavoriteTracks();
+        const filtered = list.filter((t) => !(t.provider === provider && t.providerTrackId === providerTrackId));
+        window.localStorage.setItem("soqaro-favorite-tracks", JSON.stringify(filtered));
+      } catch {}
+    }
+    return { ok: true };
+  },
+  listFavoriteArtists: async (): Promise<ProviderArtistFavorite[]> => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem("soqaro-favorite-artists");
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
+    return [];
+  },
+  saveFavoriteArtist: async (artist: ProviderArtistSummary): Promise<ProviderArtistFavorite> => {
+    const now = new Date().toISOString();
+    const item: ProviderArtistFavorite = {
+      id: `fav-artist-${artist.provider}-${artist.providerArtistId}`,
+      provider: artist.provider,
+      providerArtistId: artist.providerArtistId,
+      name: artist.name,
+      artworkUrl: artist.artworkUrl ?? null,
+      description: artist.description ?? null,
+      createdAt: now,
+      updatedAt: now
+    };
+    if (typeof window !== "undefined") {
+      try {
+        const list = await soqaroApi.listFavoriteArtists();
+        const filtered = list.filter((a) => !(a.provider === artist.provider && a.providerArtistId === artist.providerArtistId));
+        filtered.unshift(item);
+        window.localStorage.setItem("soqaro-favorite-artists", JSON.stringify(filtered));
+      } catch {}
+    }
+    return item;
+  },
+  deleteFavoriteArtist: async (provider: Provider, providerArtistId: string): Promise<{ ok: boolean }> => {
+    if (typeof window !== "undefined") {
+      try {
+        const list = await soqaroApi.listFavoriteArtists();
+        const filtered = list.filter((a) => !(a.provider === provider && a.providerArtistId === providerArtistId));
+        window.localStorage.setItem("soqaro-favorite-artists", JSON.stringify(filtered));
+      } catch {}
+    }
+    return { ok: true };
+  },
   resolveQqMusicAudio: (
     trackId: string,
     quality: ProviderAudioQuality = "exhigh",
@@ -917,9 +1439,12 @@ export const soqaroApi = {
     const params = new URLSearchParams({ url: artworkUrl });
     return requestBlob(`/v1/providers/qqmusic/artwork?${params.toString()}`, { signal });
   },
-  listMyPlaylists: (signal?: AbortSignal) =>
-    request<Playlist[]>("/v1/playlists", { signal }),
-  createPlaylist: (payload: {
+  listMyPlaylists: async (_signal?: AbortSignal): Promise<Playlist[]> => {
+    const session = getCurrentSessionInfo();
+    const records = listLocalPlaylists();
+    return records.map((record) => toApiPlaylist(record, session.userId));
+  },
+  createPlaylist: async (payload: {
     title: string;
     description?: string | null;
     trackIds?: string[];
@@ -927,15 +1452,17 @@ export const soqaroApi = {
     coverUrl?: string | null;
     isCollaborative?: boolean;
     roomId?: string | null;
-  }) =>
-    request<Playlist>("/v1/playlists", {
-      method: "POST",
-      body: JSON.stringify(payload)
-    }).then((playlist) => {
-      notifyPlaylistsChanged();
-      return playlist;
-    }),
-  updatePlaylist: (
+  }): Promise<Playlist> => {
+    const session = getCurrentSessionInfo();
+    const created = createLocalPlaylist({
+      title: payload.title,
+      description: payload.description,
+      trackIds: payload.trackIds
+    });
+    notifyPlaylistsChanged();
+    return toApiPlaylist(created, session.userId);
+  },
+  updatePlaylist: async (
     playlistId: string,
     payload: {
       title?: string;
@@ -944,38 +1471,106 @@ export const soqaroApi = {
       coverUrl?: string | null;
       trackIds?: string[];
     }
-  ) =>
-    request<Playlist>(`/v1/playlists/${playlistId}`, {
-      method: "PATCH",
-      body: JSON.stringify(payload)
-    }).then((playlist) => {
-      notifyPlaylistsChanged();
-      return playlist;
-    }),
-  deletePlaylist: (playlistId: string) =>
-    request<{ ok: boolean }>(`/v1/playlists/${playlistId}`, {
-      method: "DELETE"
-    }).then((result) => {
-      notifyPlaylistsChanged();
-      return result;
-    }),
-  importPlaylistToRoom: (playlistId: string, payload: { roomId: string }) =>
-    request<QueueMutationResponse>(`/v1/playlists/${playlistId}/import-to-room`, {
-      method: "POST",
-      body: JSON.stringify(payload)
-    }),
-  createPlaylistFromRoom: (payload: {
+  ): Promise<Playlist> => {
+    const session = getCurrentSessionInfo();
+    const updated = updateLocalPlaylist(playlistId, {
+      title: payload.title,
+      description: payload.description,
+      trackIds: payload.trackIds
+    });
+    notifyPlaylistsChanged();
+    if (!updated) {
+      throw new Error("Playlist not found");
+    }
+    return toApiPlaylist(updated, session.userId);
+  },
+  deletePlaylist: async (playlistId: string): Promise<{ ok: boolean }> => {
+    deleteLocalPlaylist(playlistId);
+    notifyPlaylistsChanged();
+    return { ok: true };
+  },
+  importPlaylistToRoom: async (playlistId: string, payload: { roomId: string }): Promise<QueueMutationResponse> => {
+    const snapshot = getLocalRoomSnapshot(payload.roomId);
+    if (!snapshot) {
+      throw new Error("Room not found");
+    }
+    const playlist = listLocalPlaylists().find((p) => p.id === playlistId);
+    if (!playlist) {
+      throw new Error("Playlist not found");
+    }
+    const session = getCurrentSessionInfo();
+    const now = new Date().toISOString();
+    const newQueueItems: QueueItem[] = playlist.trackIds.map((trackId, idx) => ({
+      id: `queue-${playlistId}-${trackId}-${Date.now()}-${idx}`,
+      trackId,
+      requestedBy: session.nickname,
+      requestedById: session.userId,
+      source: "manual" as const,
+      sourceSeedTrackId: null,
+      position: snapshot.queue.length + idx,
+      createdAt: now
+    }));
+    snapshot.queue.push(...newQueueItems);
+    saveLocalRoomSnapshot(payload.roomId, snapshot);
+    return {
+      queue: snapshot.queue,
+      playback: snapshot.room.playback
+    };
+  },
+  createPlaylistFromRoom: async (payload: {
     roomId: string;
     title: string;
     description?: string | null;
-  }) =>
-    request<Playlist>("/v1/playlists/from-room", {
-      method: "POST",
-      body: JSON.stringify(payload)
-    }).then((playlist) => {
-      notifyPlaylistsChanged();
-      return playlist;
-    }),
+  }): Promise<Playlist> => {
+    const snapshot = getLocalRoomSnapshot(payload.roomId);
+    if (!snapshot) {
+      throw new Error("Room not found");
+    }
+    const session = getCurrentSessionInfo();
+    const trackIds = snapshot.queue.map((item) => item.trackId);
+    const created = createLocalPlaylist({
+      title: payload.title,
+      description: payload.description,
+      trackIds
+    });
+    notifyPlaylistsChanged();
+    return toApiPlaylist(created, session.userId);
+  },
+  getBilibiliAccount: async (): Promise<{ connected: boolean; uid: string | null; uname: string | null; face: string | null }> => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem("soqaro-provider-bilibili-account");
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
+    return { connected: false, uid: null, uname: null, face: null };
+  },
+  saveBilibiliAccount: async (account: { uid?: string | null; uname?: string | null; face?: string | null; sessdata?: string }): Promise<{ connected: boolean; uid: string | null; uname: string | null; face: string | null }> => {
+    const full = {
+      connected: true,
+      uid: account.uid ?? "bili-user",
+      uname: account.uname ?? "哔哩哔哩用户",
+      face: account.face ?? null
+    };
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem("soqaro-provider-bilibili-account", JSON.stringify(full));
+        if (account.sessdata) {
+          window.localStorage.setItem("soqaro-provider-bilibili-sessdata", account.sessdata);
+        }
+      } catch {}
+    }
+    return full;
+  },
+  disconnectBilibiliAccount: async (): Promise<{ ok: boolean }> => {
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.removeItem("soqaro-provider-bilibili-account");
+        window.localStorage.removeItem("soqaro-provider-bilibili-sessdata");
+      } catch {}
+    }
+    return { ok: true };
+  },
   searchBilibiliTracks: (keywords: string, options?: { page?: number; pageSize?: number; tid?: number }) => {
     const params = new URLSearchParams({
       keyword: keywords,

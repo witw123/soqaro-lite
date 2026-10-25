@@ -18,7 +18,8 @@ export function resolvePlaybackOwnership(
     } else if (pathname === "/room") {
       if (searchParams) {
         routeRoomId = searchParams.get("id") || searchParams.get("roomId") || null;
-      } else if (typeof window !== "undefined") {
+      }
+      if (!routeRoomId && typeof window !== "undefined") {
         const query = new URLSearchParams(window.location.search);
         routeRoomId = query.get("id") || query.get("roomId") || null;
       }
