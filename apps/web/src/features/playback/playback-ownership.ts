@@ -14,7 +14,7 @@ export function resolvePlaybackOwnership(
       routeRoomId = roomMatch[1];
     }
   }
-  const isWorkspace = pathname === "/rooms" || /^\/app(?:\/|$)/.test(pathname ?? "");
+  const isWorkspace = pathname === "/" || pathname === "/rooms" || /^\/app(?:\/|$)/.test(pathname ?? "");
   const runtimeRoomId = isLyricsWindow
     ? null
     : routeRoomId ?? (isWorkspace ? awayRoomId : null);

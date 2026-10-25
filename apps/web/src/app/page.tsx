@@ -1,15 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { RoomsHomePage } from "@/components/room-home";
+import { AppRouteShell } from "@/components/shell";
 
 export default function HomePage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace("/app");
-  }, [router]);
-
-  return <RoomsHomePage showSidebar={false} />;
+  return (
+    <AppRouteShell>
+      <RoomsHomePage showSidebar={false} />
+    </AppRouteShell>
+  );
 }
+

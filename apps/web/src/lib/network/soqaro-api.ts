@@ -209,6 +209,35 @@ function createLocalRoomSnapshot(
   };
 }
 
+function saveLocalRoomSnapshot(roomId: string, snapshot: RoomSnapshot) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(`soqaro-room-${roomId}`, JSON.stringify(snapshot));
+    const raw = window.localStorage.getItem("soqaro-lite-rooms");
+    if (raw) {
+      const list: RoomDirectoryItem[] = JSON.parse(raw);
+      const index = list.findIndex((item) => item.room.id === roomId);
+      if (index >= 0) {
+        list[index].room.name = snapshot.room.name ?? list[index].room.name;
+        list[index].room.description = snapshot.room.description ?? list[index].room.description;
+        list[index].room.visibility = snapshot.room.visibility;
+        list[index].room.playbackStatus = snapshot.room.playback?.status ?? "paused";
+        const currentTrack = snapshot.room.playback?.currentTrackId
+          ? snapshot.tracks.find((t) => t.id === snapshot.room.playback?.currentTrackId)
+          : null;
+        list[index].room.directoryNowPlaying = currentTrack
+          ? {
+              title: currentTrack.title,
+              artist: currentTrack.artist,
+              artworkUrl: currentTrack.artworkUrl ?? null
+            }
+          : null;
+        window.localStorage.setItem("soqaro-lite-rooms", JSON.stringify(list));
+      }
+    }
+  } catch {}
+}
+
 export const soqaroApi = {
   getAuthConfig: () => request<AuthConfig>("/v1/auth/config"),
   me: async (): Promise<AuthSession> => ({
@@ -361,135 +390,334 @@ export const soqaroApi = {
         if (raw) return JSON.parse(raw);
       } catch {}
     }
-    return createLocalRoomSnapshot(roomId, roomId, `房间 ${roomId}`);
+    const snapshot = createLocalRoomSnapshot(roomId, roomId.replace(/^room-/, ""), `房间 ${roomId}`);
+    saveLocalRoomSnapshot(roomId, snapshot);
+    return snapshot;
   },
   getRoom: async (roomId: string): Promise<RoomSnapshot> => {
     return soqaroApi.joinRoom(roomId);
   },
-  listRoomChatHistory: (roomId: string, before?: string) =>
-    request<RoomChatHistoryResponse>(
-      `/v1/rooms/${roomId}/chat${before ? `?before=${encodeURIComponent(before)}` : ""}`
-    ),
-  deleteRoomChatMessage: (roomId: string, messageId: string) =>
-    request<{ roomId: string; messageId: string }>(`/v1/rooms/${roomId}/chat/${messageId}`, {
-      method: "DELETE"
-    }),
-  syncRoom: (roomId: string, sinceRevision = 0) =>
-    request<RoomSyncResponse>(`/v1/rooms/${roomId}/sync`, {
-      headers: { "x-room-revision": String(Math.max(0, Math.floor(sinceRevision))) }
-    }),
-  updateRoom: (roomId: string, input: UpdateRoomRequest) =>
-    request<RoomSnapshot>(`/v1/rooms/${roomId}`, {
-      method: "PATCH",
-      body: JSON.stringify(input)
-    }),
-  listRoomRequests: (roomId: string) => request<RoomRequest[]>(`/v1/rooms/${roomId}/requests`),
-  createRoomRequest: (roomId: string, input: Omit<RoomRequest, "id" | "roomId" | "requesterId" | "requesterName" | "status" | "createdAt">) =>
-    request<RoomRequest>(`/v1/rooms/${roomId}/requests`, {
-      method: "POST",
-      body: JSON.stringify(input)
-    }),
-  approveRoomRequest: (roomId: string, requestId: string) =>
-    request<RoomRequest>(`/v1/rooms/${roomId}/requests/${requestId}/approve`, { method: "POST" }),
-  rejectRoomRequest: (roomId: string, requestId: string) =>
-    request<RoomRequest>(`/v1/rooms/${roomId}/requests/${requestId}/reject`, { method: "POST" }),
-  getRoomReactionCounts: (roomId: string, trackId?: string | null) =>
-    request<{ like: number; applause: number; fire?: number; sparkle?: number }>(`/v1/rooms/${roomId}/reactions${trackId ? `?trackId=${encodeURIComponent(trackId)}` : ""}`),
-  updateRoomMemberPermissions: (
+  listRoomChatHistory: async (_roomId: string, _before?: string): Promise<RoomChatHistoryResponse> => ({
+    messages: [],
+    nextCursor: null
+  }),
+  deleteRoomChatMessage: async (roomId: string, messageId: string) => ({
+    roomId,
+    messageId
+  }),
+  syncRoom: async (roomId: string, _sinceRevision = 0): Promise<RoomSyncResponse> => {
+    let snapshot: RoomSnapshot | null = null;
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem(`soqaro-room-${roomId}`);
+        if (raw) {
+          snapshot = JSON.parse(raw);
+        }
+      } catch {}
+    }
+    if (!snapshot) {
+      snapshot = createLocalRoomSnapshot(roomId, roomId.replace(/^room-/, ""), `房间 ${roomId}`);
+      saveLocalRoomSnapshot(roomId, snapshot);
+    }
+    return {
+      roomId,
+      roomDeleted: false,
+      roomRevision: snapshot.room.roomRevision ?? 1,
+      snapshot,
+      deletedTracks: [],
+      unchanged: false
+    };
+  },
+  updateRoom: async (roomId: string, input: UpdateRoomRequest): Promise<RoomSnapshot> => {
+    const snapshot = await soqaroApi.getRoom(roomId);
+    if (input.name !== undefined) snapshot.room.name = input.name;
+    if (input.description !== undefined) snapshot.room.description = input.description;
+    if (input.visibility !== undefined) snapshot.room.visibility = input.visibility;
+    snapshot.room.roomRevision = (snapshot.room.roomRevision ?? 1) + 1;
+    saveLocalRoomSnapshot(roomId, snapshot);
+    return snapshot;
+  },
+  listRoomRequests: async (_roomId: string): Promise<RoomRequest[]> => [],
+  createRoomRequest: async (
     roomId: string,
-    memberId: string,
+    input: Omit<RoomRequest, "id" | "roomId" | "requesterId" | "requesterName" | "status" | "createdAt">
+  ): Promise<RoomRequest> => ({
+    id: "req-" + Math.random().toString(36).slice(2, 9),
+    roomId,
+    requesterId: "local-user",
+    requesterName: "本地用户",
+    status: "approved",
+    createdAt: new Date().toISOString(),
+    ...input
+  }),
+  approveRoomRequest: async (_roomId: string, requestId: string): Promise<RoomRequest> => ({
+    id: requestId,
+    roomId: "",
+    requesterId: "local-user",
+    requesterName: "本地用户",
+    provider: "local",
+    providerTrackId: "local-track",
+    title: "曲目",
+    artist: "歌手",
+    album: null,
+    durationMs: 0,
+    artworkUrl: null,
+    status: "approved",
+    createdAt: new Date().toISOString()
+  }),
+  rejectRoomRequest: async (_roomId: string, requestId: string): Promise<RoomRequest> => ({
+    id: requestId,
+    roomId: "",
+    requesterId: "local-user",
+    requesterName: "本地用户",
+    provider: "local",
+    providerTrackId: "local-track",
+    title: "曲目",
+    artist: "歌手",
+    album: null,
+    durationMs: 0,
+    artworkUrl: null,
+    status: "rejected",
+    createdAt: new Date().toISOString()
+  }),
+  getRoomReactionCounts: async (_roomId: string, _trackId?: string | null) => ({
+    like: 0,
+    applause: 0,
+    fire: 0,
+    sparkle: 0
+  }),
+  updateRoomMemberPermissions: async (
+    roomId: string,
+    _memberId: string,
     permissions: RoomMemberPermissions
-  ) =>
-    request<RoomSnapshot>(`/v1/rooms/${roomId}/members/${memberId}/permissions`, {
-      method: "PATCH",
-      body: JSON.stringify({ permissions })
-    }),
-  removeRoomMember: (roomId: string, memberId: string) =>
-    request<RoomSnapshot>(`/v1/rooms/${roomId}/members/${memberId}`, {
-      method: "DELETE"
-    }),
-  leaveRoom: (roomId: string) =>
-    request(`/v1/rooms/${roomId}/leave`, {
-      method: "POST"
-    }),
-  deleteRoom: (roomId: string) =>
-    request<{ ok: boolean }>(`/v1/rooms/${roomId}`, {
-      method: "DELETE"
-    }),
-  registerTrack: (roomId: string, payload: object) =>
-    request<TrackMeta>(`/v1/rooms/${roomId}/tracks`, {
-      method: "POST",
-      body: JSON.stringify(payload)
-    }),
-  registerTracks: (roomId: string, payload: { tracks: object[] }) =>
-    request<TrackMeta[]>(`/v1/rooms/${roomId}/tracks/batch`, {
-      method: "POST",
-      body: JSON.stringify(payload)
-    }),
-  prepareTrackAsset: (roomId: string, trackId: string, payload: PrepareTrackAssetRequest) =>
-    request<TrackMeta>(`/v1/rooms/${roomId}/tracks/${trackId}/asset`, {
-      method: "POST",
-      body: JSON.stringify(payload)
-    }),
-  reportTrackAssetUnavailable: (roomId: string, trackId: string, payload: ReportTrackAssetUnavailableRequest) =>
-    request<{ ok: boolean; trackId: string; reason: string }>(`/v1/rooms/${roomId}/tracks/${trackId}/asset/unavailable`, {
-      method: "POST",
-      body: JSON.stringify(payload)
-    }),
-  deleteTrack: (roomId: string, trackId: string) =>
-    request<{ ok: boolean }>(`/v1/rooms/${roomId}/tracks/${trackId}`, {
-      method: "DELETE"
-    }),
-  deleteTracks: (roomId: string, payload: { trackIds: string[] }) =>
-    request<{ ok: boolean; deletedTrackIds: string[] }>(`/v1/rooms/${roomId}/tracks/batch-delete`, {
-      method: "POST",
-      body: JSON.stringify(payload)
-    }),
-  reorderTracks: (roomId: string, payload: { trackIds: string[] }) =>
-    request<TrackMeta[]>(`/v1/rooms/${roomId}/tracks/reorder`, {
-      method: "PATCH",
-      body: JSON.stringify(payload)
-    }),
-  addQueueItem: (roomId: string, payload: { trackId: string }) =>
-    request<QueueMutationResponse>(`/v1/rooms/${roomId}/queue`, {
-      method: "POST",
-      body: JSON.stringify(payload)
-    }),
-  addQueueItems: (roomId: string, payload: { trackIds: string[] }) =>
-    request<QueueMutationResponse>(`/v1/rooms/${roomId}/queue/batch`, {
-      method: "POST",
-      body: JSON.stringify(payload)
-    }),
-  updateRadioAutopilot: (roomId: string, payload: { enabled: boolean }) =>
-    request<RoomSnapshot>(`/v1/rooms/${roomId}/radio-autopilot`, {
-      method: "PATCH",
-      body: JSON.stringify(payload)
-    }),
-  insertRadioAutopilotNextTrack: (roomId: string, payload: { trackId: string }) =>
-    request<RadioAutopilotNextTrackMutationResponse>(`/v1/rooms/${roomId}/radio-autopilot/next`, {
-      method: "POST",
-      body: JSON.stringify(payload)
-    }),
-  reorderQueue: (roomId: string, payload: { queueItemIds: string[] }) =>
-    request<QueueMutationResponse>(`/v1/rooms/${roomId}/queue/reorder`, {
-      method: "PATCH",
-      body: JSON.stringify(payload)
-    }),
-  setNextQueueItem: (roomId: string, payload: { queueItemId: string }) =>
-    request<QueueMutationResponse>(`/v1/rooms/${roomId}/queue/next`, {
-      method: "PATCH",
-      body: JSON.stringify(payload)
-    }),
-  removeQueueItem: (roomId: string, queueItemId: string) =>
-    request<QueueMutationResponse>(`/v1/rooms/${roomId}/queue/${queueItemId}`, {
-      method: "DELETE"
-    }),
-  removeQueueItems: (roomId: string, payload: { queueItemIds: string[] }) =>
-    request<QueueMutationResponse>(`/v1/rooms/${roomId}/queue/batch-remove`, {
-      method: "POST",
-      body: JSON.stringify(payload)
-    }),
-  updatePlayback: (
+  ): Promise<RoomSnapshot> => {
+    const snapshot = await soqaroApi.getRoom(roomId);
+    snapshot.room.newMemberPermissions = permissions;
+    saveLocalRoomSnapshot(roomId, snapshot);
+    return snapshot;
+  },
+  removeRoomMember: async (roomId: string, _memberId: string): Promise<RoomSnapshot> => {
+    return soqaroApi.getRoom(roomId);
+  },
+  leaveRoom: async (_roomId: string) => ({ ok: true }),
+  deleteRoom: async (roomId: string): Promise<{ ok: boolean }> => {
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.removeItem(`soqaro-room-${roomId}`);
+        const raw = window.localStorage.getItem("soqaro-lite-rooms");
+        if (raw) {
+          const list: RoomDirectoryItem[] = JSON.parse(raw);
+          const filtered = list.filter((r) => r.room.id !== roomId);
+          window.localStorage.setItem("soqaro-lite-rooms", JSON.stringify(filtered));
+        }
+      } catch {}
+    }
+    return { ok: true };
+  },
+  registerTrack: async (roomId: string, payload: object): Promise<TrackMeta> => {
+    const snapshot = await soqaroApi.getRoom(roomId);
+    const track = payload as TrackMeta;
+    const existing = snapshot.tracks.findIndex((t) => t.id === track.id);
+    if (existing >= 0) {
+      snapshot.tracks[existing] = track;
+    } else {
+      snapshot.tracks.push(track);
+    }
+    snapshot.room.roomRevision = (snapshot.room.roomRevision ?? 1) + 1;
+    saveLocalRoomSnapshot(roomId, snapshot);
+    return track;
+  },
+  registerTracks: async (roomId: string, payload: { tracks: object[] }): Promise<TrackMeta[]> => {
+    const snapshot = await soqaroApi.getRoom(roomId);
+    const registered: TrackMeta[] = [];
+    for (const raw of payload.tracks) {
+      const track = raw as TrackMeta;
+      const existing = snapshot.tracks.findIndex((t) => t.id === track.id);
+      if (existing >= 0) {
+        snapshot.tracks[existing] = track;
+      } else {
+        snapshot.tracks.push(track);
+      }
+      registered.push(track);
+    }
+    snapshot.room.roomRevision = (snapshot.room.roomRevision ?? 1) + 1;
+    saveLocalRoomSnapshot(roomId, snapshot);
+    return registered;
+  },
+  prepareTrackAsset: async (roomId: string, trackId: string, _payload: PrepareTrackAssetRequest): Promise<TrackMeta> => {
+    const snapshot = await soqaroApi.getRoom(roomId);
+    const track = snapshot.tracks.find((t) => t.id === trackId);
+    return (
+      track ??
+      (({
+        id: trackId,
+        title: "未知曲目",
+        artist: "未知歌手",
+        album: "",
+        durationMs: 0,
+        source: "local"
+      } as unknown) as TrackMeta)
+    );
+  },
+  reportTrackAssetUnavailable: async (_roomId: string, trackId: string, payload: ReportTrackAssetUnavailableRequest) => ({
+    ok: true,
+    trackId,
+    reason: payload.reason
+  }),
+  deleteTrack: async (roomId: string, trackId: string): Promise<{ ok: boolean }> => {
+    const snapshot = await soqaroApi.getRoom(roomId);
+    snapshot.tracks = snapshot.tracks.filter((t) => t.id !== trackId);
+    snapshot.queue = snapshot.queue.filter((q) => q.trackId !== trackId);
+    snapshot.room.roomRevision = (snapshot.room.roomRevision ?? 1) + 1;
+    saveLocalRoomSnapshot(roomId, snapshot);
+    return { ok: true };
+  },
+  deleteTracks: async (roomId: string, payload: { trackIds: string[] }): Promise<{ ok: boolean; deletedTrackIds: string[] }> => {
+    const snapshot = await soqaroApi.getRoom(roomId);
+    const set = new Set(payload.trackIds);
+    snapshot.tracks = snapshot.tracks.filter((t) => !set.has(t.id));
+    snapshot.queue = snapshot.queue.filter((q) => !set.has(q.trackId));
+    snapshot.room.roomRevision = (snapshot.room.roomRevision ?? 1) + 1;
+    saveLocalRoomSnapshot(roomId, snapshot);
+    return { ok: true, deletedTrackIds: payload.trackIds };
+  },
+  reorderTracks: async (roomId: string, payload: { trackIds: string[] }): Promise<TrackMeta[]> => {
+    const snapshot = await soqaroApi.getRoom(roomId);
+    const trackMap = new Map(snapshot.tracks.map((t) => [t.id, t]));
+    const reordered: TrackMeta[] = [];
+    for (const id of payload.trackIds) {
+      const t = trackMap.get(id);
+      if (t) reordered.push(t);
+    }
+    for (const t of snapshot.tracks) {
+      if (!payload.trackIds.includes(t.id)) reordered.push(t);
+    }
+    snapshot.tracks = reordered;
+    snapshot.room.roomRevision = (snapshot.room.roomRevision ?? 1) + 1;
+    saveLocalRoomSnapshot(roomId, snapshot);
+    return reordered;
+  },
+  addQueueItem: async (roomId: string, payload: { trackId: string }): Promise<QueueMutationResponse> => {
+    const snapshot = await soqaroApi.getRoom(roomId);
+    const newItemId = "qi-" + Math.random().toString(36).slice(2, 9);
+    snapshot.queue.push({
+      id: newItemId,
+      trackId: payload.trackId,
+      requestedBy: "本地用户",
+      requestedById: "local-user",
+      source: "manual",
+      position: snapshot.queue.length + 1,
+      sourceSeedTrackId: null,
+      createdAt: new Date().toISOString()
+    });
+    snapshot.room.playback.queueVersion = (snapshot.room.playback.queueVersion ?? 1) + 1;
+    snapshot.room.roomRevision = (snapshot.room.roomRevision ?? 1) + 1;
+    saveLocalRoomSnapshot(roomId, snapshot);
+    return {
+      queue: snapshot.queue,
+      playback: snapshot.room.playback
+    };
+  },
+  addQueueItems: async (roomId: string, payload: { trackIds: string[] }): Promise<QueueMutationResponse> => {
+    const snapshot = await soqaroApi.getRoom(roomId);
+    const now = new Date().toISOString();
+    for (const trackId of payload.trackIds) {
+      snapshot.queue.push({
+        id: "qi-" + Math.random().toString(36).slice(2, 9),
+        trackId,
+        requestedBy: "本地用户",
+        requestedById: "local-user",
+        source: "manual",
+        position: snapshot.queue.length + 1,
+        sourceSeedTrackId: null,
+        createdAt: now
+      });
+    }
+    snapshot.room.playback.queueVersion = (snapshot.room.playback.queueVersion ?? 1) + 1;
+    snapshot.room.roomRevision = (snapshot.room.roomRevision ?? 1) + 1;
+    saveLocalRoomSnapshot(roomId, snapshot);
+    return {
+      queue: snapshot.queue,
+      playback: snapshot.room.playback
+    };
+  },
+  updateRadioAutopilot: async (roomId: string, payload: { enabled: boolean }): Promise<RoomSnapshot> => {
+    const snapshot = await soqaroApi.getRoom(roomId);
+    snapshot.room.radioAutopilot = { enabled: payload.enabled };
+    saveLocalRoomSnapshot(roomId, snapshot);
+    return snapshot;
+  },
+  insertRadioAutopilotNextTrack: async (roomId: string, _payload: { trackId: string }): Promise<RadioAutopilotNextTrackMutationResponse> => {
+    const snapshot = await soqaroApi.getRoom(roomId);
+    return {
+      insertedQueueItemId: "",
+      queue: snapshot.queue,
+      playback: snapshot.room.playback
+    };
+  },
+  reorderQueue: async (roomId: string, payload: { queueItemIds: string[] }): Promise<QueueMutationResponse> => {
+    const snapshot = await soqaroApi.getRoom(roomId);
+    const itemMap = new Map(snapshot.queue.map((item) => [item.id, item]));
+    const nextQueue: typeof snapshot.queue = [];
+    for (const id of payload.queueItemIds) {
+      const item = itemMap.get(id);
+      if (item) nextQueue.push(item);
+    }
+    for (const item of snapshot.queue) {
+      if (!payload.queueItemIds.includes(item.id)) {
+        nextQueue.push(item);
+      }
+    }
+    snapshot.queue = nextQueue;
+    snapshot.room.playback.queueVersion = (snapshot.room.playback.queueVersion ?? 1) + 1;
+    snapshot.room.roomRevision = (snapshot.room.roomRevision ?? 1) + 1;
+    saveLocalRoomSnapshot(roomId, snapshot);
+    return {
+      queue: snapshot.queue,
+      playback: snapshot.room.playback
+    };
+  },
+  setNextQueueItem: async (roomId: string, payload: { queueItemId: string }): Promise<QueueMutationResponse> => {
+    const snapshot = await soqaroApi.getRoom(roomId);
+    const targetIdx = snapshot.queue.findIndex((item) => item.id === payload.queueItemId);
+    if (targetIdx > 0) {
+      const currentIdx = snapshot.queue.findIndex((item) => item.id === snapshot.room.playback.currentQueueItemId);
+      const [item] = snapshot.queue.splice(targetIdx, 1);
+      const insertAt = currentIdx >= 0 ? currentIdx + 1 : 0;
+      snapshot.queue.splice(insertAt, 0, item);
+      snapshot.room.playback.queueVersion = (snapshot.room.playback.queueVersion ?? 1) + 1;
+      snapshot.room.roomRevision = (snapshot.room.roomRevision ?? 1) + 1;
+      saveLocalRoomSnapshot(roomId, snapshot);
+    }
+    return {
+      queue: snapshot.queue,
+      playback: snapshot.room.playback
+    };
+  },
+  removeQueueItem: async (roomId: string, queueItemId: string): Promise<QueueMutationResponse> => {
+    const snapshot = await soqaroApi.getRoom(roomId);
+    snapshot.queue = snapshot.queue.filter((item) => item.id !== queueItemId);
+    snapshot.room.playback.queueVersion = (snapshot.room.playback.queueVersion ?? 1) + 1;
+    snapshot.room.roomRevision = (snapshot.room.roomRevision ?? 1) + 1;
+    saveLocalRoomSnapshot(roomId, snapshot);
+    return {
+      queue: snapshot.queue,
+      playback: snapshot.room.playback
+    };
+  },
+  removeQueueItems: async (roomId: string, payload: { queueItemIds: string[] }): Promise<QueueMutationResponse> => {
+    const snapshot = await soqaroApi.getRoom(roomId);
+    const set = new Set(payload.queueItemIds);
+    snapshot.queue = snapshot.queue.filter((item) => !set.has(item.id));
+    snapshot.room.playback.queueVersion = (snapshot.room.playback.queueVersion ?? 1) + 1;
+    snapshot.room.roomRevision = (snapshot.room.roomRevision ?? 1) + 1;
+    saveLocalRoomSnapshot(roomId, snapshot);
+    return {
+      queue: snapshot.queue,
+      playback: snapshot.room.playback
+    };
+  },
+  updatePlayback: async (
     roomId: string,
     payload: {
       action: "play" | "pause" | "seek" | "next" | "prev" | "gapless-next" | "set-mode";
@@ -501,11 +729,32 @@ export const soqaroApi = {
       actorPeerId?: string;
       expectedVersion: number;
     }
-  ) =>
-    request<PlaybackSnapshot>(`/v1/rooms/${roomId}/playback`, {
-      method: "PATCH",
-      body: JSON.stringify(payload)
-    }),
+  ): Promise<PlaybackSnapshot> => {
+    const snapshot = await soqaroApi.getRoom(roomId);
+    const pb = snapshot.room.playback;
+    const now = new Date().toISOString();
+
+    if (payload.action === "play") {
+      pb.status = "playing";
+      pb.startedAt = now;
+    } else if (payload.action === "pause") {
+      pb.status = "paused";
+      pb.startedAt = null;
+    } else if (payload.action === "seek") {
+      pb.positionMs = payload.positionMs ?? pb.positionMs;
+      pb.startedAt = pb.status === "playing" ? now : null;
+    } else if (payload.action === "set-mode" && payload.playbackMode) {
+      pb.playbackMode = payload.playbackMode;
+    }
+
+    if (payload.trackId !== undefined) pb.currentTrackId = payload.trackId;
+    if (payload.queueItemId !== undefined) pb.currentQueueItemId = payload.queueItemId;
+
+    pb.playbackRevision = (pb.playbackRevision ?? 1) + 1;
+    snapshot.room.roomRevision = (snapshot.room.roomRevision ?? 1) + 1;
+    saveLocalRoomSnapshot(roomId, snapshot);
+    return pb;
+  },
   getIceConfig: async (): Promise<IceConfigResponse> => ({
     iceServers: [
       { urls: "stun:stun.l.google.com:19302" },

@@ -22,8 +22,8 @@ describe("playback ownership", () => {
     expect(resolvePlaybackOwnership("/room/two", "one", false).runtimeRoomId).toBe("two");
   });
 
-  it("does not start media on auth, marketing or detached lyrics pages", () => {
-    for (const path of ["/", "/auth", "/desktop-lyrics"]) {
+  it("does not start media on auth or detached lyrics pages", () => {
+    for (const path of ["/auth", "/desktop-lyrics"]) {
       expect(resolvePlaybackOwnership(path, "one", path === "/desktop-lyrics").owner).toBeNull();
     }
     expect(resolvePlaybackOwnership("/app", "one", true).runtimeRoomId).toBeNull();

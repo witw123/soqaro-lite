@@ -1,5 +1,6 @@
-﻿import type { ClientToServerEvents, ServerToClientEvents } from "@soqaro/shared";
+import type { ClientToServerEvents, ServerToClientEvents } from "@soqaro/shared";
 import { io, type Socket } from "socket.io-client";
+import { createLocalRoomSocket } from "./local-room-socket";
 
 const localHostnames = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 
@@ -55,7 +56,20 @@ function resolveWsBaseUrl() {
 export const wsBaseUrl = resolveWsBaseUrl();
 export const socketPath = process.env.NEXT_PUBLIC_SOCKET_PATH ?? "/ws/socket.io";
 
+function resolveCurrentHostname(): string {
+  if (typeof window === "undefined") return "localhost";
+  return window.location.hostname || window.location.host?.split(":")[0] || "localhost";
+}
+
 export function createRoomSocket() {
+  const configuredWsBaseUrl = process.env.NEXT_PUBLIC_WS_URL?.trim();
+  const currentHostname = resolveCurrentHostname();
+  const isLocalStandalone = !configuredWsBaseUrl && isLocalHostname(currentHostname);
+
+  if (isLocalStandalone) {
+    return createLocalRoomSocket();
+  }
+
   const baseUrl = normalizeSocketBaseUrl(wsBaseUrl, socketPath);
 
   return io(baseUrl, {
