@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import type { ProviderLibrarySnapshot } from "@soqaro/shared";
@@ -23,12 +23,7 @@ const labels: Record<ImportKind, string> = {
 };
 
 export function ProviderDataImportSection() {
-  const neteaseEnabled = process.env.NEXT_PUBLIC_NETEASE_ENABLED === "true";
-  const qqmusicEnabled = process.env.NEXT_PUBLIC_QQMUSIC_ENABLED === "true";
-  const providers: Provider[] = [
-    ...(neteaseEnabled ? ["netease" as const] : []),
-    ...(qqmusicEnabled ? ["qqmusic" as const] : [])
-  ];
+  const providers: Provider[] = ["netease", "qqmusic"];
 
   if (providers.length === 0) {
     return (

@@ -71,7 +71,7 @@ type TrackMoveRequest = {
 };
 
 export function PlaylistsWorkspacePage({
-  playlistView = "network",
+  playlistView = "local",
   embedded = false
 }: {
   playlistView?: "local" | "network";
@@ -79,7 +79,7 @@ export function PlaylistsWorkspacePage({
 }) {
   const router = useRouter();
   const authEntryHref = buildWorkspaceAuthHref({
-    redirectTo: playlistView === "local" ? "/app/profile/playlists" : "/app/playlists"
+    redirectTo: "/app/playlists"
   });
   const { activeSession, hydrated } = useSessionIdentity({
     sessionStorageKey: "soqaro-session",
@@ -241,6 +241,29 @@ export function PlaylistsWorkspacePage({
       return readLocalData();
     };
 
+    if (playlistView === "local") {
+      try {
+        const localData = await loadLocalData();
+        if (version !== refreshVersion.current) return 0;
+        const localPlaylistRecords = ensureDefaultLocalPlaylist({
+          trackIds: getDefaultLocalPlaylistTrackIds(
+            localData.tracks,
+            new Set(localData.storage.savedFileHashes),
+            { allowUnverifiedWhenEmpty: localData.storage.permission !== "granted" }
+          ),
+          sourceDirectoryName: localData.storage.directoryName
+        });
+        applyLocalData(localData.tracks, localPlaylistRecords, localData.roomTracks);
+        setMessage(null);
+        return localData.tracks.length;
+      } catch {
+        if (version !== refreshVersion.current) return 0;
+        setPlaylistDataLoaded(true);
+        setMessage("本地歌单加载失败，请刷新重试。");
+        return 0;
+      }
+    }
+
     const loadNetworkData = async () => {
       const playlists = await soqaroApi.listMyPlaylists();
       applyDatabasePlaylists(playlists);
@@ -254,11 +277,10 @@ export function PlaylistsWorkspacePage({
     if (version !== refreshVersion.current) return 0;
 
     if (localResult.status === "rejected") {
-      if (playlistView === "local") setPlaylistDataLoaded(true);
       setMessage("本地歌单加载失败，请刷新重试。");
     }
     if (networkResult.status === "rejected") {
-      if (playlistView === "network") setPlaylistDataLoaded(true);
+      setPlaylistDataLoaded(true);
       if (networkPlaylistsRef.current.length === 0) {
         setMessage("网络歌单加载失败，请稍后重试；本地音频仍可使用。");
       }

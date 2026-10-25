@@ -66,6 +66,11 @@ import {
   type LocalPlaylistRecord
 } from "@/features/playlist/local-playlist";
 import {
+  getLocalStoredProfile,
+  saveLocalStoredProfile,
+  recordLocalListeningProgress
+} from "@/features/personalization/local-personalization-store";
+import {
   downloadDirectTrack,
   notifyPlaylistsChanged,
   request,
@@ -352,65 +357,184 @@ function toApiPlaylist(record: LocalPlaylistRecord, ownerId = "local-user"): Pla
 
 export const soqaroApi = {
   getAuthConfig: () => request<AuthConfig>("/v1/auth/config"),
-  me: async (): Promise<AuthSession> => ({
-    id: "local-session",
-    userId: "local-user",
-    username: "soqaro_user",
-    nickname: "本地用户",
-    token: "local-token",
-    createdAt: "2026-01-01T00:00:00.000Z"
-  }),
-  login: async (username: string, _password: string, _turnstileToken?: string): Promise<AuthSession> => ({
-    id: "local-session",
-    userId: "local-user",
-    username: username || "soqaro_user",
-    nickname: username || "本地用户",
-    token: "local-token",
-    createdAt: "2026-01-01T00:00:00.000Z"
-  }),
-  register: async (username: string, _password: string, nickname?: string, _turnstileToken?: string): Promise<AuthSession> => ({
-    id: "local-session",
-    userId: "local-user",
-    username: username || "soqaro_user",
-    nickname: nickname || username || "本地用户",
-    token: "local-token",
-    createdAt: "2026-01-01T00:00:00.000Z"
-  }),
-  logout: async () => ({ ok: true }),
-  getPersonalizationProfile: (signal?: AbortSignal) =>
-    request<PersonalizationProfileResponse>("/v1/personalization/profile", { signal }),
-  recordPersonalizationEvent: (input: RecordPersonalizationEvent) =>
-    request<{ ok: boolean }>("/v1/personalization/events", {
-      method: "POST",
-      body: JSON.stringify(input),
-      keepalive: true
-    }),
-  getPersonalizationRecommendations: (input: PersonalizationRecommendationsQuery) => {
-    const params = new URLSearchParams({ surface: input.surface });
-    if (input.provider) params.set("provider", input.provider);
-    if (input.currentTrackKey) params.set("currentTrackKey", input.currentTrackKey);
-    if (input.query) params.set("query", input.query);
-    if (input.excludedTrackKeys?.length) params.set("excludedTrackKeys", input.excludedTrackKeys.join(","));
-    return request<PersonalizationRecommendationsResponse>(`/v1/personalization/recommendations?${params.toString()}`);
+  me: async (): Promise<AuthSession> => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem("soqaro-session");
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
+    return {
+      id: "local-session",
+      userId: "local-user",
+      username: "soqaro_user",
+      nickname: "本地用户",
+      token: "local-token",
+      createdAt: "2026-01-01T00:00:00.000Z"
+    };
   },
-  recordPersonalizationFeedback: (input: PersonalizationFeedback) =>
-    request<{ ok: boolean }>("/v1/personalization/feedback", { method: "POST", body: JSON.stringify(input) }),
-  listPersonalizationExclusions: (signal?: AbortSignal) =>
-    request<PersonalizationExclusion[]>("/v1/personalization/exclusions", { signal }),
-  removePersonalizationExclusion: (kind: "track" | "artist", key: string) =>
-    request<{ ok: boolean }>(`/v1/personalization/exclusions/${kind}/${encodeURIComponent(key)}`, { method: "DELETE" }),
-  getTrackRadio: (input: TrackRadioQuery) =>
-    request<PersonalizationTrack[]>("/v1/personalization/radio", {
-      method: "POST",
-      body: JSON.stringify(input)
-    }),
-  bootstrapColdStartProfile: (input: ColdStartTasteInput) =>
-    request<{ ok: boolean }>("/v1/personalization/cold-start", {
-      method: "POST",
-      body: JSON.stringify(input)
-    }),
-  clearPersonalizationProfile: () =>
-    request<{ ok: boolean }>("/v1/personalization/profile", { method: "DELETE" }),
+  login: async (username: string, _password: string, _turnstileToken?: string): Promise<AuthSession> => {
+    const session: AuthSession = {
+      id: "local-session-" + (username ? username.trim().toLowerCase() : "user"),
+      userId: "user-" + (username ? username.trim().toLowerCase() : "local"),
+      username: username || "soqaro_user",
+      nickname: username || "本地用户",
+      token: "local-token",
+      createdAt: new Date().toISOString()
+    };
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem("soqaro-session", JSON.stringify(session));
+      } catch {}
+    }
+    return session;
+  },
+  register: async (username: string, _password: string, nickname?: string, _turnstileToken?: string): Promise<AuthSession> => {
+    const session: AuthSession = {
+      id: "local-session-" + (username ? username.trim().toLowerCase() : "user"),
+      userId: "user-" + (username ? username.trim().toLowerCase() : "local"),
+      username: username || "soqaro_user",
+      nickname: nickname || username || "本地用户",
+      token: "local-token",
+      createdAt: new Date().toISOString()
+    };
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem("soqaro-session", JSON.stringify(session));
+      } catch {}
+    }
+    return session;
+  },
+  logout: async () => {
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.removeItem("soqaro-session");
+      } catch {}
+    }
+    return { ok: true };
+  },
+  getPersonalizationProfile: async (_signal?: AbortSignal): Promise<PersonalizationProfileResponse> => {
+    return getLocalStoredProfile() ?? {
+      version: "1.0",
+      startedAt: new Date().toISOString(),
+      totalListenedMs: 0,
+      totalPlayCount: 0,
+      trackCount: 0,
+      artistCount: 0,
+      tasteGroups: [],
+      topTracks: [],
+      topArtists: [],
+      recentTracks: [],
+      sourceDistribution: []
+    };
+  },
+  recordPersonalizationEvent: async (input: RecordPersonalizationEvent): Promise<{ ok: boolean }> => {
+    if (input.type === "playback" && input.track) {
+      recordLocalListeningProgress({
+        track: {
+          provider: input.track.provider,
+          providerTrackId: input.track.providerTrackId,
+          title: input.track.title,
+          artist: input.track.artist,
+          album: input.track.album ?? null,
+          durationMs: input.track.durationMs,
+          artworkUrl: input.track.artworkUrl ?? null
+        },
+        deltaMs: input.listenedMs ?? 10000,
+        isNewPlay: false
+      });
+    }
+    return { ok: true };
+  },
+  getPersonalizationRecommendations: async (_input: PersonalizationRecommendationsQuery): Promise<PersonalizationRecommendationsResponse> => {
+    return {
+      profileVersion: "1.0",
+      providers: ["netease", "qqmusic"],
+      forYou: [],
+      familiarArtists: [],
+      moodDiscovery: [],
+      deepCuts: [],
+      playlists: [],
+      liveRooms: []
+    };
+  },
+  recordPersonalizationFeedback: async (_input: PersonalizationFeedback): Promise<{ ok: boolean }> => {
+    return { ok: true };
+  },
+  listPersonalizationExclusions: async (_signal?: AbortSignal): Promise<PersonalizationExclusion[]> => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem("soqaro-personalization-exclusions");
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
+    return [];
+  },
+  addPersonalizationExclusion: async (exclusion: PersonalizationExclusion): Promise<{ ok: boolean }> => {
+    if (typeof window !== "undefined") {
+      try {
+        const list = await soqaroApi.listPersonalizationExclusions();
+        list.push(exclusion);
+        window.localStorage.setItem("soqaro-personalization-exclusions", JSON.stringify(list));
+      } catch {}
+    }
+    return { ok: true };
+  },
+  removePersonalizationExclusion: async (kind: "track" | "artist", key: string): Promise<{ ok: boolean }> => {
+    if (typeof window !== "undefined") {
+      try {
+        const list = await soqaroApi.listPersonalizationExclusions();
+        const filtered = list.filter((item) => !(item.kind === kind && item.key === key));
+        window.localStorage.setItem("soqaro-personalization-exclusions", JSON.stringify(filtered));
+      } catch {}
+    }
+    return { ok: true };
+  },
+  getTrackRadio: async (_input: TrackRadioQuery): Promise<PersonalizationTrack[]> => {
+    return [];
+  },
+  bootstrapColdStartProfile: async (input: ColdStartTasteInput): Promise<{ ok: boolean }> => {
+    const profile = getLocalStoredProfile() ?? {
+      version: "1.0",
+      startedAt: new Date().toISOString(),
+      totalListenedMs: 0,
+      totalPlayCount: 0,
+      trackCount: 0,
+      artistCount: 0,
+      tasteGroups: [],
+      topTracks: [],
+      topArtists: [],
+      recentTracks: [],
+      sourceDistribution: []
+    };
+    if (input.selections?.length) {
+      profile.tasteGroups = input.selections.map((sel) => ({
+        id: "genre",
+        label: sel.label,
+        tags: [
+          {
+            label: sel.label,
+            score: 1,
+            confidence: 1,
+            source: "derived-behavior",
+            updatedAt: new Date().toISOString()
+          }
+        ]
+      }));
+    }
+    saveLocalStoredProfile(profile);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("soqaro:personalization-changed"));
+    }
+    return { ok: true };
+  },
+  clearPersonalizationProfile: async (): Promise<{ ok: boolean }> => {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem("soqaro_local_profile");
+      window.dispatchEvent(new Event("soqaro:personalization-changed"));
+    }
+    return { ok: true };
+  },
   createRoom: async (input: {
     visibility?: "private" | "public";
     roomType: RoomType;
