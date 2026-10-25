@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Soqaro</title>
-  <meta http-equiv="refresh" content="0; url=https://soqaro.witw.top/app">
+  <title>Soqaro Lite</title>
+  
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body, html { width: 100%; height: 100%; background-color: #09090b; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; }
@@ -17,12 +17,12 @@
 </head>
 <body>
   <div class="loader"></div>
-  <div class="text" id="status-text">正在进入 Soqaro...</div>
+  <div class="text" id="status-text">正在加载 Soqaro Lite...</div>
   <button class="btn" id="retry-btn" type="button">点击重试</button>
   <script>
     function openApp() {
       try {
-        window.location.href = "https://soqaro.witw.top/app";
+        // local app load
       } catch (err) {
         var status = document.getElementById("status-text");
         if (status) status.innerText = "网络连接受阻，请检查网络设置";

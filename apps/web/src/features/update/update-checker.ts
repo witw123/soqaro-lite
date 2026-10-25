@@ -185,7 +185,7 @@ export async function fetchLatestRelease(): Promise<ReleaseInfo> {
 
   // Fallback direct request to GitHub
   try {
-    const ghRes = await fetch("https://api.github.com/repos/witw123/soqaro/releases/latest", {
+    const ghRes = await fetch("https://api.github.com/repos/witw123/soqaro-lite/releases/latest", {
       headers: {
         Accept: "application/vnd.github+json"
       }
@@ -200,7 +200,7 @@ export async function fetchLatestRelease(): Promise<ReleaseInfo> {
 
   // Fallback if GitHub API is unavailable or rate limited:
   try {
-    const redirectRes = await fetch("https://github.com/witw123/soqaro/releases/latest", {
+    const redirectRes = await fetch("https://github.com/witw123/soqaro-lite/releases/latest", {
       method: "HEAD",
       redirect: "manual"
     });
@@ -219,23 +219,23 @@ export async function fetchLatestRelease(): Promise<ReleaseInfo> {
           body: "通过 GitHub Releases 发布最新版本。",
           assets: [
             {
-              name: `Soqaro_${version}_x64-setup.exe`,
-              browser_download_url: `https://github.com/witw123/soqaro/releases/download/${tagName}/Soqaro_${version}_x64-setup.exe`,
+              name: `Soqaro Lite_${version}_x64-setup.exe`,
+              browser_download_url: `https://github.com/witw123/soqaro-lite/releases/download/${tagName}/Soqaro Lite_${version}_x64-setup.exe`,
               size: 0
             },
             {
-              name: `Soqaro_${version}_universal.dmg`,
-              browser_download_url: `https://github.com/witw123/soqaro/releases/download/${tagName}/Soqaro_${version}_universal.dmg`,
+              name: `Soqaro Lite_${version}_universal.dmg`,
+              browser_download_url: `https://github.com/witw123/soqaro-lite/releases/download/${tagName}/Soqaro Lite_${version}_universal.dmg`,
               size: 0
             },
             {
-              name: `Soqaro_${version}_amd64.AppImage`,
-              browser_download_url: `https://github.com/witw123/soqaro/releases/download/${tagName}/Soqaro_${version}_amd64.AppImage`,
+              name: `soqaro-lite_${version}_amd64.AppImage`,
+              browser_download_url: `https://github.com/witw123/soqaro-lite/releases/download/${tagName}/soqaro-lite_${version}_amd64.AppImage`,
               size: 0
             },
             {
-              name: `Soqaro-Android-${tagName}.apk`,
-              browser_download_url: `https://github.com/witw123/soqaro/releases/download/${tagName}/Soqaro-Android-${tagName}.apk`,
+              name: `Soqaro-Lite-Android-${tagName}.apk`,
+              browser_download_url: `https://github.com/witw123/soqaro-lite/releases/download/${tagName}/Soqaro-Lite-Android-${tagName}.apk`,
               size: 0
             }
           ]

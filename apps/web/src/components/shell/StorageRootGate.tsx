@@ -75,7 +75,7 @@ export function StorageRootGate({ children }: { children: ReactNode }) {
   };
   return (
     <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center gap-4 px-6">
-      <h1 className="text-xl font-semibold">Soqaro</h1>
+      <h1 className="text-xl font-semibold">Soqaro Lite</h1>
       <p className="text-sm text-foreground-muted" role="status">
         {busy ? "正在打开存储根目录…" : native ? "无法打开应用存储目录" : "尚未授权存储根目录"}
       </p>
@@ -89,7 +89,7 @@ export function StorageRootGate({ children }: { children: ReactNode }) {
         </Button>
       ) : null}
       {!busy && !native && !supportsLocalAudioDirectory() ? (
-        <p className="text-sm text-amber-300">当前浏览器不支持目录授权，请使用桌面版 Chrome、Edge 或 Soqaro 客户端。</p>
+        <p className="text-sm text-amber-300">当前浏览器不支持目录授权，请使用桌面版 Chrome、Edge 或 Soqaro Lite 客户端。</p>
       ) : null}
     </main>
   );

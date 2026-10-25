@@ -175,7 +175,7 @@ export function AboutSettingsSection() {
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <Button
-              onClick={() => void openExternalUrl("https://github.com/witw123/soqaro")}
+              onClick={() => void openExternalUrl("https://github.com/witw123/soqaro-lite")}
               size="sm"
               type="button"
               variant="outline"
@@ -184,7 +184,7 @@ export function AboutSettingsSection() {
               <span className="ml-1.5">GitHub 仓库</span>
             </Button>
             <Button
-              onClick={() => void openExternalUrl("https://github.com/witw123/soqaro/releases")}
+              onClick={() => void openExternalUrl("https://github.com/witw123/soqaro-lite/releases")}
               size="sm"
               type="button"
               variant="outline"

@@ -10,7 +10,7 @@ import {
   FolderIcon
 } from "@/components/icons/DiscoverIcons";
 
-const githubRepositoryUrl = "https://github.com/witw123/soqaro";
+const githubRepositoryUrl = "https://github.com/witw123/soqaro-lite";
 
 /**
  * Three distinct room collaboration modes
@@ -361,7 +361,7 @@ export function ProductLandingPage() {
 
           <div className="mt-6 rounded-xl border border-white/[0.08] bg-black/40 p-4 font-mono text-xs text-white/80 overflow-x-auto hide-scrollbar">
             <div className="text-white/40 select-none mb-1"># 快速本地启动 Monorepo 全栈工作区</div>
-            <div className="text-emerald-400">git clone https://github.com/witw123/soqaro.git</div>
+            <div className="text-emerald-400">git clone https://github.com/witw123/soqaro-lite.git</div>
             <div>cd soqaro && pnpm install</div>
             <div className="text-accent">pnpm dev</div>
           </div>

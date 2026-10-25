@@ -86,7 +86,7 @@ async fn toggle_desktop_lyrics(app: AppHandle) -> Result<bool, String> {
             }
             #[cfg(not(debug_assertions))]
             {
-                Url::parse("https://soqaro.witw.top/desktop-lyrics").expect("valid fallback url")
+                Url::parse("http://localhost:3000/desktop-lyrics").expect("valid fallback url")
             }
         }
     };

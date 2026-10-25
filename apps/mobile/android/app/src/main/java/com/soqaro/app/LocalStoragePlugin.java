@@ -59,10 +59,18 @@ public class LocalStoragePlugin extends Plugin {
     @PluginMethod
     public void execute(PluginCall call) {
         getActivity().runOnUiThread(() -> {
-            Uri uri = Uri.parse(getBridge().getWebView().getUrl());
-            if (!"https".equals(uri.getScheme()) || !"soqaro.witw.top".equals(uri.getHost())) {
-                call.reject("Storage is only available to Soqaro");
-                return;
+            String currentUrl = getBridge().getWebView().getUrl();
+            if (currentUrl != null && !currentUrl.isEmpty()) {
+                Uri uri = Uri.parse(currentUrl);
+                String host = uri.getHost();
+                boolean isAllowedHost = host == null || host.isEmpty()
+                        || "localhost".equalsIgnoreCase(host)
+                        || "127.0.0.1".equals(host)
+                        || "soqaro.witw.top".equalsIgnoreCase(host);
+                if (!isAllowedHost) {
+                    call.reject("Storage is only available to Soqaro Lite");
+                    return;
+                }
             }
             runOperation(call);
         });

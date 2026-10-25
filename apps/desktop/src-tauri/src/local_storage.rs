@@ -125,10 +125,13 @@ fn execute(request: StorageRequest) -> Result<Value, String> {
 #[tauri::command]
 pub async fn local_storage(window: tauri::WebviewWindow, request: StorageRequest) -> Result<Value, String> {
     let url = window.url().map_err(|e| e.to_string())?;
-    let trusted = url.scheme() == "https" && url.host_str() == Some("soqaro.witw.top");
-    let development = cfg!(debug_assertions) && url.scheme() == "http" && url.host_str() == Some("localhost");
-    if window.label() != "main" || !(trusted || development) {
-        return Err("Storage is only available to the main Soqaro window".into());
+    let scheme = url.scheme();
+    let host = url.host_str().unwrap_or_default();
+    let is_trusted = scheme == "tauri"
+        || (scheme == "https" && (host == "soqaro.witw.top" || host == "localhost" || host == "tauri.localhost"))
+        || (scheme == "http" && (host == "localhost" || host == "tauri.localhost" || host == "127.0.0.1"));
+    if window.label() != "main" || !is_trusted {
+        return Err("Storage is only available to the main Soqaro Lite window".into());
     }
     tauri::async_runtime::spawn_blocking(move || execute(request)).await.map_err(|e| e.to_string())?
 }
