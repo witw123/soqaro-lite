@@ -1,0 +1,37 @@
+{
+  "name": "soqaro-lite",
+  "version": "1.0.0",
+  "description": "极简点对点高保真多人同步听歌工具 (无需后端服务器)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "webrtc",
+    "audio-sync",
+    "p2p",
+    "listen-together",
+    "peerjs",
+    "serverless"
+  ],
+  "author": "witw123",
+  "license": "MIT",
+  "dependencies": {
+    "lucide-react": "^1.61.0",
+    "peerjs": "^1.5.5",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~6.0.3",
+    "vite": "^8.3.4"
+  }
+}
