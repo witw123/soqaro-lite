@@ -27,6 +27,33 @@ export function toRoomTopic(codeOrId: string): string {
   return `soqaro/v1/rooms/${clean}`;
 }
 
+export async function getMqttConnect() {
+  const mod: any = await import("mqtt");
+  const fn =
+    mod.connect ||
+    mod.default?.connect ||
+    (typeof mod.default === "function" ? mod.default : null);
+  if (typeof fn !== "function") {
+    throw new Error("MQTT 客户端加载异常：未找到 connect 方法。");
+  }
+  return fn;
+}
+
+export async function createSignalingMqttClient(
+  brokerUrl: string,
+  options: Record<string, unknown> = {}
+) {
+  const connectFn = await getMqttConnect();
+  const mergedOptions = {
+    ...options,
+    forceNativeWebSocket: true,
+    ...(typeof WebSocket !== "undefined"
+      ? { createWebsocket: (url: string, protocols: string[]) => new WebSocket(url, protocols) }
+      : {})
+  };
+  return connectFn(brokerUrl, mergedOptions);
+}
+
 export async function fetchRemoteRoomSnapshotByCode(
   joinCode: string,
   session: { userId: string; nickname: string },
@@ -36,9 +63,7 @@ export async function fetchRemoteRoomSnapshotByCode(
     throw new Error("P2P 连接仅支持在客户端环境下运行。");
   }
 
-  const { connect } = await import("mqtt");
-
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     let isDone = false;
     let timer: any = null;
     let client: any = null;
@@ -65,17 +90,18 @@ export async function fetchRemoteRoomSnapshotByCode(
     }, timeoutMs);
 
     try {
-      client = connect(MQTT_BROKER_URLS[0], {
+      client = await createSignalingMqttClient(MQTT_BROKER_URLS[0], {
         clientId: `sq-sub-${session.userId.slice(0, 8)}-${Math.random().toString(36).slice(2, 6)}`,
         clean: true,
         connectTimeout: 5000,
         reconnectPeriod: 0
       });
-    } catch {
+    } catch (err: any) {
       if (isDone) return;
       isDone = true;
       cleanup();
-      reject(new Error("信令网络初始化失败，请检查网络设置。"));
+      console.error("[p2p-signaling] MQTT init error:", err);
+      reject(new Error("信令网络初始化失败: " + (err?.message || "请检查网络设置。")));
       return;
     }
 
@@ -128,6 +154,7 @@ export async function fetchRemoteRoomSnapshotByCode(
       if (isDone) return;
       isDone = true;
       cleanup();
+      console.error("[p2p-signaling] Client error:", err);
       reject(new Error("信令连接异常: " + (err?.message || "网络中断")));
     });
   });

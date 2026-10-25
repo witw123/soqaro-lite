@@ -10,6 +10,7 @@ import type {
 import type { Socket } from "socket.io-client";
 import {
   MQTT_BROKER_URLS,
+  createSignalingMqttClient,
   toRoomTopic,
   type SignalingPacket
 } from "./p2p-signaling";
@@ -297,12 +298,10 @@ export class P2PRoomSocket {
     sessionNickname: string
   ) {
     try {
-      const { connect } = await import("mqtt");
-
       const brokerUrl = MQTT_BROKER_URLS[0];
       const clientId = `sq-${this.isHost ? "h" : "m"}-${sessionUserId.slice(0, 8)}-${Math.random().toString(36).slice(2, 6)}`;
 
-      const client = connect(brokerUrl, {
+      const client = await createSignalingMqttClient(brokerUrl, {
         clientId,
         clean: true,
         connectTimeout: 8000,

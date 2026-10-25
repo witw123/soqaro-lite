@@ -34,17 +34,16 @@ export function JoinCodeDialogModal({
 
   return (
     <RoomDialog
-      description="输入 6 位房间码，直接通过 P2P 连入对方房间。"
       onClose={onClose}
-      title="输入房间码加入"
+      title="输入房间码"
     >
       <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-        <label className="flex flex-col gap-2 text-xs font-medium text-foreground" htmlFor="join-code-input">
+        <label className="flex flex-col gap-1.5 text-xs font-medium text-foreground" htmlFor="join-code-input">
           房间码
           <input
             autoCapitalize="characters"
             autoCorrect="off"
-            className="w-full rounded-lg border-[0.5px] border-surface-border bg-background px-3 py-2 text-xs font-mono uppercase tracking-widest text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+            className="w-full rounded-md border-[0.5px] border-surface-border bg-background px-3 py-2 text-xs font-mono uppercase tracking-widest text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent"
             data-testid="join-code-input"
             id="join-code-input"
             onChange={(event) => {
@@ -58,7 +57,7 @@ export function JoinCodeDialogModal({
         </label>
         {displayedError ? (
           <p
-            className="animate-fade-in rounded-lg bg-red-500/10 border-[0.5px] border-red-500/20 px-3 py-2 text-xs text-red-300"
+            className="animate-fade-in rounded-md bg-red-950/20 border-[0.5px] border-red-800/40 px-3 py-2 text-xs text-red-400"
             data-testid="room-home-status"
             role="alert"
           >

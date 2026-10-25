@@ -16,7 +16,7 @@ export function RoomDialog({
   children
 }: {
   title: string;
-  description: string;
+  description?: string;
   onClose: () => void;
   children: ReactNode;
 }) {
@@ -25,7 +25,7 @@ export function RoomDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          {description ? <DialogDescription>{description}</DialogDescription> : null}
         </DialogHeader>
         {children}
       </DialogContent>
