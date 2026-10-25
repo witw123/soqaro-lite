@@ -145,28 +145,97 @@ async function downloadQualityProviderTrack(
   });
 }
 
+function createLocalRoomSnapshot(
+  roomId: string,
+  joinCode: string,
+  name: string = "本地房间",
+  description: string | null = null,
+  roomType: RoomType = "interactive",
+  visibility: "public" | "private" = "public"
+): RoomSnapshot {
+  const now = new Date().toISOString();
+  return {
+    room: {
+      id: roomId,
+      hostId: "local-user",
+      joinCode,
+      name,
+      description,
+      hasPassword: false,
+      visibility,
+      roomType,
+      radioAutopilot: {
+        enabled: false
+      },
+      requests: [],
+      newMemberPermissions: {
+        library: true,
+        queue: true,
+        player: true
+      },
+      members: [
+        {
+          id: "local-user",
+          nickname: "房主",
+          role: "host",
+          joinedAt: now,
+          peerId: null,
+          presenceState: "online"
+        }
+      ],
+      directoryHostNickname: "房主",
+      directoryMemberCount: 1,
+      directoryOnlineMemberCount: 1,
+      directoryIsMember: true,
+      playback: {
+        status: "paused",
+        currentTrackId: null,
+        currentQueueItemId: null,
+        sourceSessionId: null,
+        sourcePeerId: null,
+        sourceTrackId: null,
+        positionMs: 0,
+        startedAt: null,
+        queueVersion: 1,
+        playbackRevision: 1,
+        mediaEpoch: 1
+      },
+      presenceRevision: 1,
+      roomRevision: 1
+    },
+    tracks: [],
+    queue: [],
+    playlists: []
+  };
+}
+
 export const soqaroApi = {
   getAuthConfig: () => request<AuthConfig>("/v1/auth/config"),
-  register: (
-    username: string,
-    password: string,
-    nickname: string,
-    turnstileToken?: string
-  ) =>
-    request<AuthSession>("/v1/auth/register", {
-      method: "POST",
-      body: JSON.stringify({ username, password, nickname, turnstileToken })
-    }, { notifyAuthExpired: false }),
-  login: (username: string, password: string, turnstileToken?: string) =>
-    request<AuthSession>("/v1/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ username, password, turnstileToken })
-    }, { notifyAuthExpired: false }),
-  logout: () =>
-    request<{ ok: boolean }>("/v1/auth/logout", {
-      method: "POST"
-    }),
-  me: () => request<AuthSession>("/v1/auth/me", undefined, { notifyAuthExpired: false }),
+  me: async (): Promise<AuthSession> => ({
+    id: "local-session",
+    userId: "local-user",
+    username: "soqaro_user",
+    nickname: "本地用户",
+    token: "local-token",
+    createdAt: "2026-01-01T00:00:00.000Z"
+  }),
+  login: async (username: string, _password: string, _turnstileToken?: string): Promise<AuthSession> => ({
+    id: "local-session",
+    userId: "local-user",
+    username: username || "soqaro_user",
+    nickname: username || "本地用户",
+    token: "local-token",
+    createdAt: "2026-01-01T00:00:00.000Z"
+  }),
+  register: async (username: string, _password: string, nickname?: string, _turnstileToken?: string): Promise<AuthSession> => ({
+    id: "local-session",
+    userId: "local-user",
+    username: username || "soqaro_user",
+    nickname: nickname || username || "本地用户",
+    token: "local-token",
+    createdAt: "2026-01-01T00:00:00.000Z"
+  }),
+  logout: async () => ({ ok: true }),
   getPersonalizationProfile: (signal?: AbortSignal) =>
     request<PersonalizationProfileResponse>("/v1/personalization/profile", { signal }),
   recordPersonalizationEvent: (input: RecordPersonalizationEvent) =>
@@ -201,38 +270,102 @@ export const soqaroApi = {
     }),
   clearPersonalizationProfile: () =>
     request<{ ok: boolean }>("/v1/personalization/profile", { method: "DELETE" }),
-  createRoom: (input: {
+  createRoom: async (input: {
     visibility?: "private" | "public";
     roomType: RoomType;
     name?: string;
     description?: string | null;
     password?: string;
     newMemberPermissions?: RoomMemberPermissions;
-  }) =>
-    request<RoomSnapshot>("/v1/rooms", {
-      method: "POST",
-      body: JSON.stringify(input)
-    }),
-  getRecentRoom: () => request<RoomSnapshot | null>("/v1/rooms/recent/active"),
-  getRecentRooms: () => request<RoomSnapshot[]>("/v1/rooms/recent"),
-  getRoomActivity: () => request<RoomActivitySummary[]>("/v1/rooms/activity"),
-  listOwnedRooms: () => request<RoomSnapshot[]>("/v1/rooms/owned"),
-  getRoomInteractionStats: () => request<RoomInteractionStats>("/v1/rooms/stats"),
-  recoverRoom: (roomId: string) =>
-    request<RoomSnapshot | null>(`/v1/rooms/${roomId}/recover`),
-  listRooms: (signal?: AbortSignal) => request<RoomDirectoryItem[]>("/v1/rooms", { signal }),
-  joinRoomByCode: (joinCode: string, password?: string) =>
-    request<RoomJoinResponse>("/v1/rooms/join-by-code", {
-      method: "POST",
-      body: JSON.stringify({ joinCode, ...(password ? { password } : {}) })
-    }),
-  joinRoom: (roomId: string, password?: string) =>
-    request<RoomSnapshot>(`/v1/rooms/${roomId}/join`, {
-      method: "POST",
-      body: password ? JSON.stringify({ password }) : undefined
-    }),
-  getRoom: (roomId: string) =>
-    request<RoomSnapshot>(`/v1/rooms/${roomId}`),
+  }): Promise<RoomSnapshot> => {
+    const roomId = "room-" + Math.random().toString(36).slice(2, 9);
+    const joinCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const snapshot = createLocalRoomSnapshot(
+      roomId,
+      joinCode,
+      input.name?.trim() || "本地房间",
+      input.description?.trim() || null,
+      input.roomType || "interactive",
+      input.visibility || "public"
+    );
+    if (input.newMemberPermissions) {
+      snapshot.room.newMemberPermissions = input.newMemberPermissions;
+    }
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem("soqaro-lite-rooms");
+        const list: RoomDirectoryItem[] = raw ? JSON.parse(raw) : [];
+        const item: RoomDirectoryItem = {
+          room: {
+            id: roomId,
+            joinCode,
+            name: snapshot.room.name ?? "本地房间",
+            description: snapshot.room.description ?? null,
+            hasPassword: false,
+            visibility: snapshot.room.visibility,
+            roomType: snapshot.room.roomType,
+            directoryHostNickname: "房主",
+            directoryMemberCount: 1,
+            directoryOnlineMemberCount: 1,
+            directoryIsMember: true,
+            directoryQueueDepth: 0,
+            directoryPendingRequestCount: 0,
+            directoryBroadcastState: "off_air",
+            directoryNowPlaying: null,
+            playbackStatus: "paused"
+          }
+        };
+        window.localStorage.setItem("soqaro-lite-rooms", JSON.stringify([item, ...list]));
+        window.localStorage.setItem(`soqaro-room-${roomId}`, JSON.stringify(snapshot));
+      } catch {}
+    }
+    return snapshot;
+  },
+  getRecentRoom: async (): Promise<RoomSnapshot | null> => null,
+  getRecentRooms: async (): Promise<RoomSnapshot[]> => [],
+  getRoomActivity: async (): Promise<RoomActivitySummary[]> => [],
+  listOwnedRooms: async (): Promise<RoomSnapshot[]> => [],
+  getRoomInteractionStats: async (): Promise<RoomInteractionStats> => ({
+    sentLikes: 0,
+    sentApplause: 0,
+    receivedReactions: 0
+  }),
+  recoverRoom: async (roomId: string): Promise<RoomSnapshot | null> => {
+    return soqaroApi.getRoom(roomId);
+  },
+  listRooms: async (_signal?: AbortSignal): Promise<RoomDirectoryItem[]> => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem("soqaro-lite-rooms");
+        if (raw) {
+          const list = JSON.parse(raw);
+          if (Array.isArray(list)) return list;
+        }
+      } catch {}
+    }
+    return [];
+  },
+  joinRoomByCode: async (joinCode: string, _password?: string): Promise<RoomJoinResponse> => {
+    const code = joinCode.trim();
+    const snapshot = createLocalRoomSnapshot(code, code, `房间 ${code}`);
+    return {
+      roomId: code,
+      roomRevision: 1,
+      room: snapshot.room
+    };
+  },
+  joinRoom: async (roomId: string, _password?: string): Promise<RoomSnapshot> => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem(`soqaro-room-${roomId}`);
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
+    return createLocalRoomSnapshot(roomId, roomId, `房间 ${roomId}`);
+  },
+  getRoom: async (roomId: string): Promise<RoomSnapshot> => {
+    return soqaroApi.joinRoom(roomId);
+  },
   listRoomChatHistory: (roomId: string, before?: string) =>
     request<RoomChatHistoryResponse>(
       `/v1/rooms/${roomId}/chat${before ? `?before=${encodeURIComponent(before)}` : ""}`
@@ -373,7 +506,14 @@ export const soqaroApi = {
       method: "PATCH",
       body: JSON.stringify(payload)
     }),
-  getIceConfig: () => request<IceConfigResponse>("/v1/realtime/ice-config"),
+  getIceConfig: async (): Promise<IceConfigResponse> => ({
+    iceServers: [
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:stun1.l.google.com:19302" }
+    ],
+    ttlSeconds: 86400,
+    source: "stun-only"
+  }),
   getNeteaseAccount: () =>
     request<NeteaseAccountStatus>("/v1/providers/netease/account"),
   startNeteaseQrLogin: () =>
@@ -682,6 +822,5 @@ export const soqaroApi = {
     }),
   getAlistStreamUrl: (rawUrl: string) =>
     `/v1/storage/alist/stream?url=${encodeURIComponent(rawUrl)}`,
-  getActiveAnnouncements: (signal?: AbortSignal) =>
-    request<{ data: SystemAnnouncement[] }>("/v1/announcements/active", { signal })
+  getActiveAnnouncements: async (_signal?: AbortSignal) => ({ data: [] as SystemAnnouncement[] })
 }

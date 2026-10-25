@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useSyncExternalStore, useState } from "react";
 import type { AuthSession } from "@soqaro/shared";
@@ -11,10 +11,19 @@ type SessionSnapshot = {
   hydrated: boolean;
 };
 
+export const defaultLocalSession: AuthSession = {
+  id: "local-session",
+  userId: "local-user",
+  username: "soqaro_user",
+  nickname: "本地用户",
+  token: "local-token",
+  createdAt: "2026-01-01T00:00:00.000Z"
+};
+
 const emptySessionSnapshot: SessionSnapshot = {
-  activeSession: null,
-  hasStoredSession: false,
-  hydrated: false
+  activeSession: defaultLocalSession,
+  hasStoredSession: true,
+  hydrated: true
 };
 
 let sessionSnapshot = emptySessionSnapshot;
@@ -77,18 +86,10 @@ function ensureSessionProbe() {
     })
     .catch((error: unknown) => {
       if (generation !== sessionGeneration) return;
-      if (!isUnauthorizedError(error)) {
-        // Unknown state: stay hydrated without inventing a logged-out verdict.
-        updateSessionSnapshot({
-          activeSession: sessionSnapshot.activeSession,
-          hasStoredSession: sessionSnapshot.hasStoredSession,
-          hydrated: true
-        });
-        return;
-      }
+      // In standalone Soqaro Lite without remote backend, always retain default local session
       updateSessionSnapshot({
-        activeSession: null,
-        hasStoredSession: false,
+        activeSession: defaultLocalSession,
+        hasStoredSession: true,
         hydrated: true
       });
     })

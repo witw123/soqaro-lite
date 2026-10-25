@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       release_id: ${{ steps.init-release.outputs.release_id }}
+      tag_name: ${{ steps.init-release.outputs.tag_name }}
     steps:
       - uses: actions/checkout@v4
 
@@ -32,6 +33,7 @@ jobs:
           gh release create "$TAG_NAME" --title "Soqaro Lite $TAG_NAME" --generate-notes
           RELEASE_ID=$(gh release view "$TAG_NAME" --json id -q .id)
           echo "release_id=$RELEASE_ID" >> "$GITHUB_OUTPUT"
+          echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
 
   release-desktop:
     needs: create-release
@@ -87,7 +89,7 @@ jobs:
         with:
           projectPath: './apps/desktop/src-tauri'
           releaseId: ${{ needs.create-release.outputs.release_id }}
-          tagName: ${{ github.ref_name }}
+          tagName: ${{ needs.create-release.outputs.tag_name }}
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
@@ -153,18 +155,12 @@ jobs:
         run: |
           mkdir -p release-apk
           APK_FILE=$(find apps/mobile/android/app/build/outputs/apk -name "*.apk" | head -n 1)
-          TAG_NAME="${{ github.ref_name }}"
-          if [ -z "$TAG_NAME" ] || [ "$TAG_NAME" = "main" ]; then
-            TAG_NAME="v1.0.0"
-          fi
+          TAG_NAME="${{ needs.create-release.outputs.tag_name }}"
           cp "$APK_FILE" "release-apk/Soqaro-Lite-Android-${TAG_NAME}.apk"
 
       - name: Upload Android APK to Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG_NAME="${{ github.ref_name }}"
-          if [ -z "$TAG_NAME" ] || [ "$TAG_NAME" = "main" ]; then
-            TAG_NAME="v1.0.0"
-          fi
+          TAG_NAME="${{ needs.create-release.outputs.tag_name }}"
           gh release upload "$TAG_NAME" "release-apk/Soqaro-Lite-Android-${TAG_NAME}.apk" --clobber

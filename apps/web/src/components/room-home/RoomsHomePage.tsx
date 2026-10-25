@@ -71,7 +71,7 @@ export function RoomsHomePage({
     staleTime: 10_000,
     refetchInterval: pageActive ? 10_000 : false
   });
-  const availableRooms = roomsQuery.data ?? emptyRooms;
+  const availableRooms = Array.isArray(roomsQuery.data) ? roomsQuery.data : emptyRooms;
   const roomsLoaded = !roomsQuery.isPending;
   const refreshAvailableRooms = roomsQuery.refetch;
   const [roomTypeFilter, setRoomTypeFilter] = useState<"all" | RoomType>("all");
@@ -201,9 +201,7 @@ export function RoomsHomePage({
     setDialogError(null);
   }
 
-  const visibleRooms = useMemo(
-    () => availableRooms
-      .filter((room) => roomTypeFilter === "all" || room.room.roomType === roomTypeFilter)
+  const visibleRooms = useMemo(() => (Array.isArray(availableRooms) ? availableRooms : emptyRooms).filter((room) => roomTypeFilter === "all" || room.room.roomType === roomTypeFilter)
       .sort((left, right) =>
       right.room.directoryOnlineMemberCount - left.room.directoryOnlineMemberCount
     ),

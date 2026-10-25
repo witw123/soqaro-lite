@@ -192,7 +192,12 @@ export async function request<T>(
     return JSON.parse(rawBody) as T;
   }
 
-  return rawBody as T;
+  // If the server returns HTML (e.g. SPA fallback on static hosting/Capacitor),
+  // throw an error instead of returning raw HTML string to prevent type errors.
+  throw new SoqaroApiError(
+    `API endpoint ${path} returned non-JSON response (${contentType || "unknown"})`,
+    null
+  );
 }
 
 const STREAM_READ_CHUNK_TIMEOUT_MS = 15_000;
