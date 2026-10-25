@@ -8,25 +8,13 @@ import type {
   ServerToClientEvents
 } from "@soqaro/shared";
 import type { Socket } from "socket.io-client";
-import { DEFAULT_ICE_SERVERS, toHostPeerId, toMemberPeerId } from "./p2p-signaling";
+import {
+  MQTT_BROKER_URLS,
+  toRoomTopic,
+  type SignalingPacket
+} from "./p2p-signaling";
 
 type EventCallback = (...args: any[]) => void;
-
-interface PeerDataConnection {
-  peer: string;
-  open: boolean;
-  send: (data: any) => void;
-  close: () => void;
-  on: (event: string, callback: (...args: any[]) => void) => void;
-}
-
-interface PeerInstance {
-  id: string;
-  destroyed: boolean;
-  on: (event: string, callback: (...args: any[]) => void) => void;
-  connect: (targetPeerId: string, options?: any) => PeerDataConnection;
-  destroy: () => void;
-}
 
 // Active P2P socket instances by room
 const activeP2PSockets = new Map<string, P2PRoomSocket>();
@@ -45,10 +33,12 @@ export class P2PRoomSocket {
   private subscribedRoomId: string | null = null;
   private channel: BroadcastChannel | null = null;
   private destroyed: boolean = false;
-  private peer: PeerInstance | null = null;
-  private hostConn: PeerDataConnection | null = null;
-  private activeMemberConns: Map<string, PeerDataConnection> = new Map();
+  private mqttClient: any = null;
   private isHost: boolean = false;
+  private mySessionId: string = "local-user";
+  private myPeerId: string | null = null;
+  private roomTopicBase: string = "";
+  private presenceHeartbeatTimer: any = null;
 
   constructor() {
     this.connect();
@@ -69,28 +59,26 @@ export class P2PRoomSocket {
     if (!this.connected) return this;
     this.connected = false;
     this.dispatch("disconnect", "io client disconnect");
+
+    if (this.presenceHeartbeatTimer) {
+      clearInterval(this.presenceHeartbeatTimer);
+      this.presenceHeartbeatTimer = null;
+    }
+
     if (this.channel) {
-      this.channel.close();
+      try {
+        this.channel.close();
+      } catch {}
       this.channel = null;
     }
-    if (this.hostConn) {
+
+    if (this.mqttClient) {
       try {
-        this.hostConn.close();
+        this.mqttClient.end(true);
       } catch {}
-      this.hostConn = null;
+      this.mqttClient = null;
     }
-    for (const conn of this.activeMemberConns.values()) {
-      try {
-        conn.close();
-      } catch {}
-    }
-    this.activeMemberConns.clear();
-    if (this.peer) {
-      try {
-        this.peer.destroy();
-      } catch {}
-      this.peer = null;
-    }
+
     if (this.subscribedRoomId) {
       activeP2PSockets.delete(this.subscribedRoomId);
       this.subscribedRoomId = null;
@@ -151,7 +139,10 @@ export class P2PRoomSocket {
       const payload = args[0] as PeerSignalMessage;
       this.broadcastToRoom("peer.signal", payload);
     } else if (event === "room.presence") {
-      // Periodic presence heartbeat
+      this.broadcastToRoom("room.presence", {
+        memberId: this.mySessionId,
+        peerId: this.myPeerId
+      });
     } else if (event === "room.unsubscribe") {
       this.disconnect();
     }
@@ -162,28 +153,32 @@ export class P2PRoomSocket {
   public broadcastToRoom(type: string, payload: any) {
     if (this.destroyed) return;
 
-    // Send through multi-tab BroadcastChannel
+    // 1. Multi-tab BroadcastChannel for zero-latency local tab communication
     try {
       this.channel?.postMessage({ type, payload });
     } catch {}
 
-    // Send through P2P
-    if (this.isHost) {
-      // Host broadcasts to all connected members
-      const message = { type, payload };
-      for (const conn of this.activeMemberConns.values()) {
-        if (conn.open) {
-          try {
-            conn.send(message);
-          } catch {}
-        }
-      }
-    } else if (this.hostConn && this.hostConn.open) {
-      // Member sends to Host
-      try {
-        this.hostConn.send({ type, payload });
-      } catch {}
+    // 2. Publish to MQTT signaling broker
+    if (!this.mqttClient || !this.roomTopicBase) return;
+
+    let targetId = "all";
+    if (type === "peer.signal" && payload?.toPeerId) {
+      targetId = payload.toPeerId;
+    } else if (!this.isHost && (type === "room.playback.patch" || type === "room.queue.patch")) {
+      targetId = "all";
     }
+
+    const packet: SignalingPacket = {
+      senderId: this.myPeerId || this.mySessionId,
+      targetId,
+      type,
+      payload,
+      sentAt: new Date().toISOString()
+    };
+
+    try {
+      this.mqttClient.publish(`${this.roomTopicBase}/events`, JSON.stringify(packet), { qos: 0 });
+    } catch {}
   }
 
   private handleRoomSubscribe(
@@ -191,12 +186,15 @@ export class P2PRoomSocket {
     ack: Function | null
   ) {
     this.subscribedRoomId = payload.roomId;
+    this.myPeerId = payload.peerId ?? null;
     activeP2PSockets.set(payload.roomId, this);
 
-    // Setup multi-tab BroadcastChannel
+    // Multi-tab BroadcastChannel setup
     if (typeof window !== "undefined") {
       if (this.channel) {
-        this.channel.close();
+        try {
+          this.channel.close();
+        } catch {}
       }
       try {
         this.channel = new BroadcastChannel(`soqaro-p2p-${payload.roomId}`);
@@ -209,7 +207,7 @@ export class P2PRoomSocket {
       } catch {}
     }
 
-    // Read local snapshot
+    // Read local snapshot to check host identity & joinCode
     let snapshot: RoomSnapshot | null = null;
     let sessionUserId = payload.sessionId ?? "anonymous";
     let sessionNickname = "本地用户";
@@ -226,8 +224,10 @@ export class P2PRoomSocket {
       } catch {}
     }
 
+    this.mySessionId = sessionUserId;
     this.isHost = Boolean(snapshot?.room && snapshot.room.hostId === sessionUserId);
     const joinCode = snapshot?.room?.joinCode ?? payload.roomId.replace(/^room-/, "");
+    this.roomTopicBase = toRoomTopic(joinCode);
 
     const now = new Date().toISOString();
     const members = (snapshot?.room.members ?? [
@@ -285,212 +285,239 @@ export class P2PRoomSocket {
       }, 0);
     }
 
-    // Initialize real PeerJS P2P transport in browser environments (outside test runner)
+    // Initialize MQTT transport in browser environments (outside test runner)
     if (typeof window !== "undefined" && process.env.NODE_ENV !== "test") {
-      void this.initPeerJsTransport(joinCode, sessionUserId, sessionNickname, payload.roomId);
+      void this.initMqttSignaling(payload.roomId, sessionUserId, sessionNickname);
     }
   }
 
-  private async initPeerJsTransport(
-    joinCode: string,
+  private async initMqttSignaling(
+    roomId: string,
     sessionUserId: string,
-    sessionNickname: string,
-    roomId: string
+    sessionNickname: string
   ) {
     try {
-      const { Peer } = await import("peerjs");
+      const { connect } = await import("mqtt");
 
-      if (this.isHost) {
-        // Host peer
-        const hostPeerId = toHostPeerId(joinCode);
-        const peer = new Peer(hostPeerId, {
-          config: DEFAULT_ICE_SERVERS,
-          debug: 0
-        }) as unknown as PeerInstance;
-        this.peer = peer;
+      const brokerUrl = MQTT_BROKER_URLS[0];
+      const clientId = `sq-${this.isHost ? "h" : "m"}-${sessionUserId.slice(0, 8)}-${Math.random().toString(36).slice(2, 6)}`;
 
-        peer.on("open", () => {
-          this.connected = true;
-          this.dispatch("connect");
-        });
+      const client = connect(brokerUrl, {
+        clientId,
+        clean: true,
+        connectTimeout: 8000,
+        reconnectPeriod: 2500,
+        keepalive: 30
+      });
+      this.mqttClient = client;
 
-        peer.on("connection", (conn: PeerDataConnection) => {
-          conn.on("open", () => {
-            this.activeMemberConns.set(conn.peer, conn);
+      client.on("connect", () => {
+        this.connected = true;
+        this.dispatch("connect");
+
+        const subTopic = `${this.roomTopicBase}/#`;
+        client.subscribe(subTopic, { qos: 0 });
+
+        // If member, send subscribe packet to inform Host
+        if (!this.isHost) {
+          const packet: SignalingPacket = {
+            senderId: this.myPeerId || sessionUserId,
+            targetId: "host",
+            type: "room.subscribe",
+            payload: {
+              memberId: sessionUserId,
+              nickname: sessionNickname,
+              peerId: this.myPeerId
+            },
+            sentAt: new Date().toISOString()
+          };
+          client.publish(`${this.roomTopicBase}/events`, JSON.stringify(packet), { qos: 0 });
+        }
+      });
+
+      client.on("message", (_topic: string, message: Buffer) => {
+        if (this.destroyed) return;
+        try {
+          const packet: SignalingPacket = JSON.parse(message.toString());
+          if (!packet?.type) return;
+
+          // Ignore self-echo
+          const isSelf =
+            packet.senderId === this.mySessionId ||
+            (this.myPeerId && packet.senderId === this.myPeerId);
+          if (isSelf) return;
+
+          // Filter messages not meant for this node
+          const isForMe =
+            packet.targetId === "all" ||
+            packet.targetId === this.mySessionId ||
+            (this.myPeerId && packet.targetId === this.myPeerId) ||
+            (this.isHost && packet.targetId === "host");
+
+          if (!isForMe) return;
+
+          this.handleIncomingSignalingPacket(roomId, packet);
+        } catch {}
+      });
+
+      client.on("error", (err: any) => {
+        console.warn("[P2PRoomSocket] MQTT warning:", err?.message || err);
+      });
+
+      // Presence heartbeat interval
+      if (this.presenceHeartbeatTimer) clearInterval(this.presenceHeartbeatTimer);
+      this.presenceHeartbeatTimer = setInterval(() => {
+        if (this.connected && !this.destroyed) {
+          this.broadcastToRoom("room.presence", {
+            memberId: this.mySessionId,
+            peerId: this.myPeerId
           });
-
-          conn.on("data", (data: any) => {
-            if (!data?.type) return;
-
-            if (data.type === "room.subscribe") {
-              const memberId = data.payload?.memberId || conn.peer;
-              const nickname = data.payload?.nickname || "访客";
-
-              // Retrieve and update snapshot
-              let currentSnapshot: RoomSnapshot | null = null;
-              try {
-                const raw = window.localStorage.getItem(`soqaro-room-${roomId}`);
-                if (raw) currentSnapshot = JSON.parse(raw);
-              } catch {}
-
-              if (currentSnapshot) {
-                const existingIdx = currentSnapshot.room.members.findIndex((m) => m.id === memberId);
-                if (existingIdx >= 0) {
-                  currentSnapshot.room.members[existingIdx].presenceState = "online";
-                } else {
-                  currentSnapshot.room.members.push({
-                    id: memberId,
-                    nickname,
-                    role: "member",
-                    joinedAt: new Date().toISOString(),
-                    peerId: conn.peer,
-                    presenceState: "online"
-                  });
-                }
-                currentSnapshot.room.directoryMemberCount = currentSnapshot.room.members.length;
-                currentSnapshot.room.directoryOnlineMemberCount = currentSnapshot.room.members.filter((m) => m.presenceState !== "offline").length;
-                currentSnapshot.room.presenceRevision = (currentSnapshot.room.presenceRevision ?? 1) + 1;
-                try {
-                  window.localStorage.setItem(`soqaro-room-${roomId}`, JSON.stringify(currentSnapshot));
-                } catch {}
-
-                // Send snapshot back to subscriber
-                conn.send({
-                  type: "room.snapshot",
-                  payload: currentSnapshot
-                });
-
-                // Broadcast presence patch to all peers
-                this.broadcastToRoom("room.presence.patch", {
-                  members: currentSnapshot.room.members,
-                  playback: currentSnapshot.room.playback,
-                  presenceRevision: currentSnapshot.room.presenceRevision,
-                  roomRevision: currentSnapshot.room.roomRevision
-                });
-                this.dispatch("room.presence.patch", {
-                  members: currentSnapshot.room.members,
-                  playback: currentSnapshot.room.playback,
-                  presenceRevision: currentSnapshot.room.presenceRevision,
-                  roomRevision: currentSnapshot.room.roomRevision
-                });
-              }
-            } else if (data.type === "room.chat") {
-              this.dispatch("room.chat", data.payload);
-              // Forward to all other members
-              for (const [peerId, otherConn] of this.activeMemberConns.entries()) {
-                if (peerId !== conn.peer && otherConn.open) {
-                  try {
-                    otherConn.send(data);
-                  } catch {}
-                }
-              }
-            } else if (data.type === "room.playback.readiness") {
-              this.dispatch("room.playback.readiness", data.payload);
-            } else if (data.type === "peer.signal") {
-              this.dispatch("peer.signal", data.payload);
-            }
-          });
-
-          conn.on("close", () => {
-            this.activeMemberConns.delete(conn.peer);
-            let currentSnapshot: RoomSnapshot | null = null;
-            try {
-              const raw = window.localStorage.getItem(`soqaro-room-${roomId}`);
-              if (raw) currentSnapshot = JSON.parse(raw);
-            } catch {}
-            if (currentSnapshot) {
-              const member = currentSnapshot.room.members.find((m) => m.peerId === conn.peer);
-              if (member) {
-                member.presenceState = "offline";
-                currentSnapshot.room.directoryOnlineMemberCount = currentSnapshot.room.members.filter((m) => m.presenceState !== "offline").length;
-                try {
-                  window.localStorage.setItem(`soqaro-room-${roomId}`, JSON.stringify(currentSnapshot));
-                } catch {}
-                this.broadcastToRoom("room.presence.patch", {
-                  members: currentSnapshot.room.members,
-                  playback: currentSnapshot.room.playback,
-                  presenceRevision: (currentSnapshot.room.presenceRevision ?? 1) + 1,
-                  roomRevision: currentSnapshot.room.roomRevision
-                });
-                this.dispatch("room.presence.patch", {
-                  members: currentSnapshot.room.members,
-                  playback: currentSnapshot.room.playback,
-                  presenceRevision: (currentSnapshot.room.presenceRevision ?? 1) + 1,
-                  roomRevision: currentSnapshot.room.roomRevision
-                });
-              }
-            }
-          });
-        });
-
-        peer.on("error", (err: any) => {
-          console.warn("[P2PRoomSocket] Host peer warning:", err?.type || err?.message);
-        });
-      } else {
-        // Member peer
-        const memberPeerId = toMemberPeerId(sessionUserId);
-        const hostPeerId = toHostPeerId(joinCode);
-        const peer = new Peer(memberPeerId, {
-          config: DEFAULT_ICE_SERVERS,
-          debug: 0
-        }) as unknown as PeerInstance;
-        this.peer = peer;
-
-        peer.on("open", () => {
-          const conn = peer.connect(hostPeerId, { reliable: true });
-          this.hostConn = conn;
-
-          conn.on("open", () => {
-            this.connected = true;
-            this.dispatch("connect");
-            conn.send({
-              type: "room.subscribe",
-              payload: {
-                memberId: sessionUserId,
-                nickname: sessionNickname
-              }
-            });
-          });
-
-          conn.on("data", (data: any) => {
-            if (!data?.type) return;
-
-            if (data.type === "room.snapshot") {
-              try {
-                window.localStorage.setItem(`soqaro-room-${roomId}`, JSON.stringify(data.payload));
-              } catch {}
-              this.dispatch("room.snapshot", data.payload);
-            } else if (data.type === "room.playback.patch") {
-              this.dispatch("room.playback.patch", data.payload);
-            } else if (data.type === "room.queue.patch") {
-              this.dispatch("room.queue.patch", data.payload);
-            } else if (data.type === "room.presence.patch") {
-              this.dispatch("room.presence.patch", data.payload);
-            } else if (data.type === "room.chat") {
-              this.dispatch("room.chat", data.payload);
-            } else if (data.type === "peer.signal") {
-              this.dispatch("peer.signal", data.payload);
-            } else {
-              this.dispatch(data.type, data.payload);
-            }
-          });
-
-          conn.on("close", () => {
-            this.connected = false;
-            this.dispatch("disconnect", "host connection closed");
-          });
-
-          conn.on("error", (err: any) => {
-            console.warn("[P2PRoomSocket] Connection error:", err);
-          });
-        });
-
-        peer.on("error", (err: any) => {
-          console.warn("[P2PRoomSocket] Member peer error:", err?.type || err?.message);
-        });
-      }
+        }
+      }, 10000);
     } catch (err) {
       console.warn("[P2PRoomSocket] Init error:", err);
+    }
+  }
+
+  private handleIncomingSignalingPacket(roomId: string, packet: SignalingPacket) {
+    const { type, payload } = packet;
+
+    if (type === "room.subscribe") {
+      if (this.isHost) {
+        const memberId = payload?.memberId || packet.senderId;
+        const nickname = payload?.nickname || "访客";
+        const peerId = payload?.peerId || null;
+
+        let currentSnapshot: RoomSnapshot | null = null;
+        try {
+          const raw = window.localStorage.getItem(`soqaro-room-${roomId}`);
+          if (raw) currentSnapshot = JSON.parse(raw);
+        } catch {}
+
+        if (currentSnapshot) {
+          const existing = currentSnapshot.room.members.find((m) => m.id === memberId);
+          if (existing) {
+            existing.presenceState = "online";
+            if (peerId) existing.peerId = peerId;
+          } else {
+            currentSnapshot.room.members.push({
+              id: memberId,
+              nickname,
+              role: "member",
+              joinedAt: new Date().toISOString(),
+              peerId,
+              presenceState: "online"
+            });
+          }
+          currentSnapshot.room.directoryMemberCount = currentSnapshot.room.members.length;
+          currentSnapshot.room.directoryOnlineMemberCount = currentSnapshot.room.members.filter(
+            (m) => m.presenceState !== "offline"
+          ).length;
+          currentSnapshot.room.presenceRevision = (currentSnapshot.room.presenceRevision ?? 1) + 1;
+
+          try {
+            window.localStorage.setItem(`soqaro-room-${roomId}`, JSON.stringify(currentSnapshot));
+          } catch {}
+
+          // Reply with snapshot directly to this member
+          const replyPacket: SignalingPacket = {
+            senderId: this.mySessionId,
+            targetId: memberId,
+            type: "room.snapshot",
+            payload: currentSnapshot,
+            sentAt: new Date().toISOString()
+          };
+          this.mqttClient?.publish(
+            `${this.roomTopicBase}/events`,
+            JSON.stringify(replyPacket),
+            { qos: 0 }
+          );
+
+          // Broadcast presence update to everyone
+          const presencePatch = {
+            members: currentSnapshot.room.members,
+            playback: currentSnapshot.room.playback,
+            presenceRevision: currentSnapshot.room.presenceRevision,
+            roomRevision: currentSnapshot.room.roomRevision
+          };
+          this.broadcastToRoom("room.presence.patch", presencePatch);
+          this.dispatch("room.presence.patch", presencePatch);
+        }
+      }
+    } else if (type === "room.snapshot") {
+      try {
+        window.localStorage.setItem(`soqaro-room-${roomId}`, JSON.stringify(payload));
+      } catch {}
+      this.dispatch("room.snapshot", payload);
+    } else if (type === "room.playback.patch") {
+      try {
+        const raw = window.localStorage.getItem(`soqaro-room-${roomId}`);
+        if (raw) {
+          const snap: RoomSnapshot = JSON.parse(raw);
+          snap.room.playback = payload.playback;
+          if (payload.roomRevision) snap.room.roomRevision = payload.roomRevision;
+          window.localStorage.setItem(`soqaro-room-${roomId}`, JSON.stringify(snap));
+        }
+      } catch {}
+      this.dispatch("room.playback.patch", payload);
+    } else if (type === "room.queue.patch") {
+      try {
+        const raw = window.localStorage.getItem(`soqaro-room-${roomId}`);
+        if (raw) {
+          const snap: RoomSnapshot = JSON.parse(raw);
+          if (payload.queue) snap.queue = payload.queue;
+          if (payload.playback) snap.room.playback = payload.playback;
+          if (payload.roomRevision) snap.room.roomRevision = payload.roomRevision;
+          window.localStorage.setItem(`soqaro-room-${roomId}`, JSON.stringify(snap));
+        }
+      } catch {}
+      this.dispatch("room.queue.patch", payload);
+    } else if (type === "room.presence.patch") {
+      this.dispatch("room.presence.patch", payload);
+    } else if (type === "room.presence") {
+      // Presence heartbeat received from a member
+      if (this.isHost && payload?.memberId) {
+        let currentSnapshot: RoomSnapshot | null = null;
+        try {
+          const raw = window.localStorage.getItem(`soqaro-room-${roomId}`);
+          if (raw) currentSnapshot = JSON.parse(raw);
+        } catch {}
+        if (currentSnapshot) {
+          const member = currentSnapshot.room.members.find((m) => m.id === payload.memberId);
+          if (member && member.presenceState !== "online") {
+            member.presenceState = "online";
+            if (payload.peerId) member.peerId = payload.peerId;
+            currentSnapshot.room.directoryOnlineMemberCount = currentSnapshot.room.members.filter(
+              (m) => m.presenceState !== "offline"
+            ).length;
+            currentSnapshot.room.presenceRevision = (currentSnapshot.room.presenceRevision ?? 1) + 1;
+            try {
+              window.localStorage.setItem(`soqaro-room-${roomId}`, JSON.stringify(currentSnapshot));
+            } catch {}
+            this.broadcastToRoom("room.presence.patch", {
+              members: currentSnapshot.room.members,
+              playback: currentSnapshot.room.playback,
+              presenceRevision: currentSnapshot.room.presenceRevision,
+              roomRevision: currentSnapshot.room.roomRevision
+            });
+            this.dispatch("room.presence.patch", {
+              members: currentSnapshot.room.members,
+              playback: currentSnapshot.room.playback,
+              presenceRevision: currentSnapshot.room.presenceRevision,
+              roomRevision: currentSnapshot.room.roomRevision
+            });
+          }
+        }
+      }
+    } else if (type === "peer.signal") {
+      // Dispatched into P2PMesh for WebRTC Data & RTP Opus Media establishment
+      this.dispatch("peer.signal", payload);
+    } else if (type === "room.chat") {
+      this.dispatch("room.chat", payload);
+    } else if (type === "room.playback.readiness") {
+      this.dispatch("room.playback.readiness", payload);
+    } else {
+      this.dispatch(type, payload);
     }
   }
 
@@ -501,15 +528,9 @@ export class P2PRoomSocket {
       try {
         callback(...args);
       } catch (err) {
-        console.error(`[P2PRoomSocket] Handler error on "${event}":`, err);
+        console.error(`[P2PRoomSocket] Error in listener for "${event}":`, err);
       }
     }
-  }
-
-  public destroy() {
-    this.destroyed = true;
-    this.disconnect();
-    this.listeners.clear();
   }
 }
 

@@ -193,10 +193,10 @@ function describeCandidatePath(peer: PeerDiagnosticsSnapshot) {
   const protocol = peer.mediaProtocol ?? peer.dataRelayProtocol ?? peer.dataProtocol;
   if (!candidate && !protocol) return "路径暂无样本";
   const candidateLabels: Record<string, string> = {
-    host: "直连",
-    srflx: "NAT 直连",
-    prflx: "点对点",
-    relay: "中继"
+    host: "局域网直连",
+    srflx: "P2P 打洞直连",
+    prflx: "点对点直连",
+    relay: "中继连接"
   };
   const protocolLabels: Record<string, string> = {
     udp: "UDP",

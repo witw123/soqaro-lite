@@ -1,4 +1,4 @@
-﻿import {
+import {
   iceServerConfigSchema,
   type IceConfigResponse,
   type IceServerConfig
@@ -38,9 +38,16 @@ export function getStaticWebRTCIceServers(): IceServerConfig[] {
   const turnUrl = process.env.NEXT_PUBLIC_TURN_URL?.trim();
   const turnUsername = process.env.NEXT_PUBLIC_TURN_USERNAME?.trim();
   const turnCredential = process.env.NEXT_PUBLIC_TURN_CREDENTIAL?.trim();
-  const stunUrl = process.env.NEXT_PUBLIC_STUN_URL?.trim() || "stun:stun.l.google.com:19302";
+  const configuredStunUrl = process.env.NEXT_PUBLIC_STUN_URL?.trim();
 
-  const servers: IceServerConfig[] = [{ urls: stunUrl }];
+  const defaultStuns = [
+    "stun:stun.qq.com:3478",
+    "stun:stun.miwifi.com:3478",
+    "stun:stun.chat.bilibili.com:3478",
+    "stun:stun.cloudflare.com:3478"
+  ];
+  const stunUrls = configuredStunUrl ? [configuredStunUrl, ...defaultStuns] : defaultStuns;
+  const servers: IceServerConfig[] = stunUrls.map((url) => ({ urls: url }));
   if (turnUrl && isTurnUrl(turnUrl)) {
     servers.push({
       urls: turnUrl,

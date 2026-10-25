@@ -1259,8 +1259,10 @@ export const soqaroApi = {
   },
   getIceConfig: async (): Promise<IceConfigResponse> => ({
     iceServers: [
-      { urls: "stun:stun.l.google.com:19302" },
-      { urls: "stun:stun1.l.google.com:19302" }
+      { urls: "stun:stun.qq.com:3478" },
+      { urls: "stun:stun.miwifi.com:3478" },
+      { urls: "stun:stun.chat.bilibili.com:3478" },
+      { urls: "stun:stun.cloudflare.com:3478" }
     ],
     ttlSeconds: 86400,
     source: "stun-only"
